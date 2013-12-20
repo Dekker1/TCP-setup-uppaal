@@ -1,0 +1,202 @@
+<?xml version="1.0" encoding="utf-8"?><!DOCTYPE nta PUBLIC '-//Uppaal Team//DTD Flat System 1.1//EN' 'http://www.it.uu.se/research/group/darts/uppaal/flat-1_1.dtd'><nta><declaration>//
+// CONSTANTS FROM RFC 3927 www.ietf.org/rfc/rfc3927.txt
+//
+// The following 10 constant declarations are copied almost verbatim from Section 9 
+//   "The following timing constants are used in this protocol; they are
+//   not intended to be user configurable."
+
+const int    PROBE_WAIT          = 1; // second   (initial random  delay)
+const int    PROBE_NUM           = 3; //          (number of probe packets)
+const int    PROBE_MIN           = 1; // second   (minimum delay till repeated probe)
+const int    PROBE_MAX           = 2; // seconds  (maximum delay till repeated probe)
+const int    ANNOUNCE_WAIT       = 2; // seconds  (delay before announcing)
+const int    ANNOUNCE_NUM        = 2; //          (number of announcement packets)
+const int    ANNOUNCE_INTERVAL   = 2; // seconds  (time between announcement packets)
+const int    MAX_CONFLICTS       = 10; //         (max conflicts before rate limiting)
+const int    RATE_LIMIT_INTERVAL = 60; // second  (delay between successive attempts)
+const int    DEFEND_INTERVAL     = 10; // seconds (minimum interval between defensive ARPs).
+
+//The following constants specify the dimensioning of the model
+const int    l 		  =3;//=9; // number of hardware addresses (including all zeroes address)
+const int    m 	      	  =4;//=15; // number of available link local IP addresses
+			       //real value is 65024 but simulator can't handle that
+//const int    n	  =2; // number of network automata
+
+typedef int[0,1] BOOL;
+typedef scalar[l] HAtype;
+HAtype nil;
+typedef scalar[m+1] IPtype; //an IP address in our model is either a link local address or the zero address
+IPtype zero;
+
+meta HAtype ha0;
+
+IPtype IP[HAtype];  // array recording (guessed) IP address for each host, zero means no address guessed
+bool UseIP[HAtype]; // array recording whether host is using an IP address
+
+// channels to send messages to network, reset a host, receive messages from network, and to send answers back to network
+chan send_req[HAtype],reset[HAtype],receive_msg[HAtype][HAtype],send_answer[HAtype];
+
+// trick to make certain transitions urgent
+urgent broadcast chan urg;
+
+typedef struct{
+  HAtype senderHA; // sender hardware address
+  IPtype senderIP; // sender IP address
+  IPtype targetIP; // target IP address
+  bool request;    // is the packet a Request or a Reply
+}ARP_packet;
+
+void initialize(ARP_packet&amp; p)
+{
+ p.senderHA := nil;
+ p.senderIP := zero;
+ p.targetIP := zero;
+ p.request  := false;
+}
+
+//meta because it is used only for value passing in synchronizations 
+meta ARP_packet packet;
+
+bool isConcreteHA[HAtype];</declaration><template><name>Network</name><parameter>const HAtype w</parameter><declaration>clock z;
+bool send[HAtype];
+bool answer[HAtype];
+
+ARP_packet s_buffer;
+ARP_packet a_buffer;
+
+void set(bool&amp; a[HAtype], bool b)
+{
+  for(i:HAtype) { if(isConcreteHA[i]) a[i]:=b; }
+}
+
+void handle_answer() {
+  if (isConcreteHA[packet.senderHA])
+    {a_buffer:=packet; set(answer,true); }
+}
+
+
+</declaration><location id="id0" x="80" y="160"></location><location id="id1" x="416" y="160"><name x="432" y="168">BUSY</name><label kind="invariant" x="432" y="184">z&lt;=1</label><label kind="comments">This specification applies to all IEEE 802 Local Area Networks (LANs)
+[802], including Ethernet [802.3], Token-Ring [802.5] and IEEE 802.11
+wireless LANs [802.11], as well as to other link-layer technologies
+that operate at data rates of at least 1 Mbps, have a round-trip
+latency of at most one second, and support ARP [RFC826].
+All ARP packets (*replies* as well as requests) that contain a Link-
+   Local 'sender IP address' MUST be sent using link-layer broadcast
+   instead of link-layer unicast.  This aids timely detection of
+   duplicate addresses.</label></location><location id="id2" x="224" y="160"><name x="184" y="176">IDLE</name></location><init ref="id0"/><transition><source ref="id0"/><target ref="id2"/><label kind="guard" x="104" y="120">isConcreteHA[w]</label><label kind="synchronisation" x="104" y="136">urg!</label></transition><transition><source ref="id2"/><target ref="id2"/><label kind="synchronisation" x="232" y="32">send_answer[w]?</label><nail x="224" y="32"/><nail x="192" y="32"/></transition><transition><source ref="id1"/><target ref="id1"/><label kind="guard" x="424" y="16">a_buffer.senderIP==zero</label><label kind="synchronisation" x="424" y="32">send_answer[w]?</label><label kind="assignment" x="424" y="48">handle_answer()</label><nail x="416" y="32"/><nail x="384" y="32"/></transition><transition><source ref="id1"/><target ref="id1"/><label kind="select" x="424" y="232">a:HAtype</label><label kind="guard" x="424" y="248">answer[a]==true</label><label kind="synchronisation" x="424" y="264">receive_msg[w][a]!</label><label kind="assignment" x="424" y="280">answer[a]:=false,
+packet:=a_buffer</label><nail x="416" y="288"/><nail x="384" y="288"/></transition><transition><source ref="id1"/><target ref="id1"/><label kind="select" x="520" y="104">a:HAtype</label><label kind="guard" x="520" y="120">send[a]==true</label><label kind="synchronisation" x="520" y="136">receive_msg[w][a]!</label><label kind="assignment" x="520" y="152">send[a]:=false,
+packet:=s_buffer</label><nail x="512" y="160"/><nail x="512" y="120"/></transition><transition><source ref="id1"/><target ref="id2"/><label kind="guard" x="104" y="208">forall (a:HAtype) !send[a] &amp;&amp; !answer[a]</label><label kind="synchronisation" x="312" y="192">urg!</label><label kind="assignment" x="248" y="224">initialize(s_buffer),
+initialize(a_buffer)</label><nail x="320" y="192"/></transition><transition><source ref="id2"/><target ref="id1"/><label kind="synchronisation" x="256" y="96">send_req[w]?</label><label kind="assignment" x="256" y="112">s_buffer:=packet,
+set(send,true),
+z:=0</label></transition></template><template><name>Initializer</name><declaration>/*void assign_addresses()
+{
+  int c;
+  for(j:PIDtype) {
+    if(c&lt;2) {
+      isConcretePID[j]:=true;
+      c++;
+    }
+  }
+
+  for (i:PIDtype) {
+    for (j:HAtype) {
+      if(j!=nil &amp;&amp; isConcretePID[i] &amp;&amp; not exists (k:PIDtype) HA[k]==j) {HA[i]:=j;}
+    }
+  }
+}*/</declaration><location id="id3" x="360" y="-56"></location><location id="id4" x="184" y="-56"><committed/></location><location id="id5" x="8" y="-56"><committed/></location><init ref="id5"/><transition><source ref="id4"/><target ref="id3"/><label kind="guard" x="224" y="-40">l==2</label><nail x="216" y="-16"/><nail x="320" y="-16"/></transition><transition><source ref="id5"/><target ref="id3"/><label kind="guard" x="16" y="-16">l==1</label><nail x="8" y="8"/><nail x="360" y="8"/></transition><transition><source ref="id4"/><target ref="id3"/><label kind="select" x="200" y="-112">i:HAtype</label><label kind="guard" x="200" y="-96">i!=nil &amp;&amp; !isConcreteHA[i]</label><label kind="assignment" x="200" y="-80">isConcreteHA[i]:=true</label></transition><transition><source ref="id5"/><target ref="id4"/><label kind="select" x="24" y="-112">i:HAtype</label><label kind="guard" x="24" y="-96">i!=nil</label><label kind="assignment" x="24" y="-80">isConcreteHA[i]:=true</label></transition></template><template><name x="-232" y="-768">Config</name><parameter>const HAtype h</parameter><declaration>clock x;
+
+int [0,PROBE_NUM] counter;          //number of probes or gratuitous ARP that have been sent
+//int [0,MAX_CONFLICTS] ConflictNum;  //the number of times an address collision has occurred
+
+</declaration><location id="id6" x="-136" y="-40"></location><location id="id7" x="224" y="-256"><name x="232" y="-248">PRE_CLAIM</name><label kind="invariant" x="232" y="-232">x&lt;=ANNOUNCE_WAIT</label></location><location id="id8" x="-136" y="-256"><name x="-120" y="-248">WAIT</name><label kind="invariant" x="-120" y="-232">x&lt;=PROBE_WAIT</label></location><location id="id9" x="64" y="-256"><name x="72" y="-248">PROBE</name><label kind="invariant" x="72" y="-232">x &lt;= PROBE_MAX</label></location><location id="id10" x="8" y="-40"><name x="24" y="-32">INIT</name></location><location id="id11" x="448" y="-256"><name x="456" y="-248">CLAIMED</name><label kind="invariant" x="456" y="-232">counter &lt; ANNOUNCE_NUM
+imply
+x&lt;=ANNOUNCE_INTERVAL</label></location><init ref="id6"/><transition><source ref="id9"/><target ref="id9"/><label kind="guard" x="104" y="-416">counter&lt;PROBE_NUM-1 &amp;&amp;
+x&gt;=PROBE_MIN</label><label kind="assignment" x="104" y="-384">counter++,
+x:=0</label><nail x="72" y="-392"/><nail x="104" y="-392"/></transition><transition><source ref="id6"/><target ref="id10"/><label kind="guard" x="-120" y="-72">isConcreteHA[h]</label><label kind="synchronisation" x="-120" y="-56">urg!</label></transition><transition><source ref="id11"/><target ref="id10"/><label kind="synchronisation" x="456" y="-120">reset[h]?</label><label kind="assignment" x="456" y="-104">UseIP[h]:=false,
+IP[h]:=zero,
+x:=0,
+counter:=0</label><nail x="448" y="-40"/></transition><transition><source ref="id8"/><target ref="id10"/><label kind="synchronisation" x="-16" y="-192">reset[h]?</label><label kind="assignment" x="-16" y="-176">IP[h]:=zero,
+x:=0</label><nail x="-112" y="-192"/><nail x="-24" y="-184"/></transition><transition><source ref="id7"/><target ref="id10"/><label kind="synchronisation" x="232" y="-168">reset[h]?</label><label kind="assignment" x="232" y="-152">IP[h]:=zero,
+x:=0</label><nail x="224" y="-120"/></transition><transition><source ref="id9"/><target ref="id7"/><label kind="guard" x="88" y="-320">counter==PROBE_NUM</label><label kind="synchronisation" x="88" y="-304">urg!</label><label kind="assignment" x="88" y="-288">x:=0,
+counter:=0</label></transition><transition><source ref="id8"/><target ref="id9"/><label kind="assignment" x="-64" y="-288">x:=PROBE_MAX,
+counter:=0</label></transition><transition><source ref="id9"/><target ref="id10"/><label kind="synchronisation" x="96" y="-176">reset[h]?</label><label kind="assignment" x="96" y="-160">IP[h]:=zero,
+x:=0,
+counter:=0</label><nail x="88" y="-144"/></transition><transition><source ref="id9"/><target ref="id9"/><label kind="guard" x="-144" y="-416">counter==PROBE_NUM-1 &amp;&amp;
+x&gt;=PROBE_MIN</label><label kind="synchronisation" x="-144" y="-384">send_req[h]!</label><label kind="assignment" x="-144" y="-368">packet.senderHA:=h,
+packet.senderIP:=zero,
+packet.targetIP:=IP[h],
+packet.request:=true,
+counter++,
+x:=0</label><nail x="24" y="-392"/><nail x="56" y="-392"/></transition><transition><source ref="id10"/><target ref="id8"/><label kind="select" x="-128" y="-160">guess:IPtype</label><label kind="guard" x="-128" y="-144">guess!=zero</label><label kind="assignment" x="-128" y="-128">IP[h]:=guess,
+x:=0</label><nail x="-136" y="-96"/></transition><transition><source ref="id11"/><target ref="id11"/><label kind="guard" x="416" y="-416">counter &lt; ANNOUNCE_NUM &amp;&amp;
+x== ANNOUNCE_INTERVAL</label><label kind="assignment" x="416" y="-384">counter++,
+x:=0,
+UseIP[h]:=true</label><nail x="416" y="-328"/><nail x="448" y="-328"/></transition><transition><source ref="id7"/><target ref="id11"/><label kind="guard" x="248" y="-304">x==ANNOUNCE_WAIT</label><label kind="assignment" x="248" y="-288">x:=ANNOUNCE_INTERVAL,
+counter:=0</label></transition></template><template><name>Chaos</name><location id="id12" x="-128" y="216"></location><init ref="id12"/><transition><source ref="id12"/><target ref="id12"/><label kind="select" x="-328" y="192">r:HAtype,
+ha:HAtype,
+ip1:IPtype,
+ip2:IPtype,
+b:BOOL</label><label kind="guard" x="-328" y="264">!isConcreteHA[ha]</label><label kind="synchronisation" x="-328" y="280">send_answer[r]!</label><label kind="assignment" x="-328" y="296">packet.senderHA:=ha,
+packet.senderIP:=ip1,
+packet.targetIP:=ip2,
+packet.request:=b</label><nail x="-168" y="368"/><nail x="-168" y="224"/></transition><transition><source ref="id12"/><target ref="id12"/><label kind="select" x="-80" y="128">r:HAtype,
+s:HAtype</label><label kind="guard" x="-80" y="160">!isConcreteHA[r]</label><label kind="synchronisation" x="-80" y="176">receive_msg[s][r]?</label><nail x="-88" y="200"/><nail x="-88" y="128"/></transition><transition><source ref="id12"/><target ref="id12"/><label kind="select" x="80" y="208">r:HAtype</label><label kind="guard" x="80" y="224">!isConcreteHA[r]</label><label kind="synchronisation" x="80" y="240">send_answer[r]?</label><nail x="72" y="216"/><nail x="72" y="256"/></transition><transition><source ref="id12"/><target ref="id12"/><label kind="select" x="-64" y="248">r:HAtype,
+ha:HAtype,
+ip1:IPtype,
+ip2:IPtype,
+b:BOOL,
+s:HAtype</label><label kind="synchronisation" x="-64" y="336">receive_msg[s][r]!</label><label kind="assignment" x="-64" y="352">packet.senderHA:=ha,
+packet.senderIP:=ip1,
+packet.targetIP:=ip2,
+packet.request:=b</label><nail x="-128" y="368"/><nail x="-72" y="368"/></transition></template><template><name x="5" y="5">InputHandler</name><parameter>const HAtype h</parameter><declaration>clock y;
+ARP_packet answer;
+HAtype network;
+bool do_reset;
+
+void ihandler(bool defend)
+{
+  if (IP[h]==zero) // Scenario A: I have not selected an IP address
+    ;
+  else if (packet.senderHA==h) // Scenario B: I have sent the packet myself
+    ;
+  else if (packet.senderIP==IP[h]) //There is a conflict: somebody else is using my address!
+  {
+    if (not UseIP[h]) // Scenario C: select a new address
+      do_reset:=true;
+    else if (defend) // Scenario D: I am going to defend my address
+    {
+      answer.senderHA:=h;
+      answer.senderIP:=IP[h];
+      answer.targetIP:=IP[h];
+      answer.request:=true;
+    }
+    else  // Scenario E: I will not defend my address
+      do_reset:=true;
+  }
+  else if (not UseIP[h])
+  {
+    if (packet.targetIP==IP[h] &amp;&amp; packet.request &amp;&amp; packet.senderIP==zero) // Scenario F: conflicting probe
+      do_reset:=true;
+    else  //Scenario G: Packet is not conflicting with IP address that I want to use
+      ;
+  }
+  else // Packet is not conflicting with IP address that I am using
+  {
+    if (packet.targetIP==IP[h] &amp;&amp; packet.request) // Scenario H: answer regular ARP request 
+    {
+      answer.senderHA:=h;
+      answer.senderIP:=IP[h];
+      answer.targetIP:=packet.senderIP;
+      answer.request:=false;
+    }
+    else // Scenario I: no reply message required
+      ; 
+  }		
+}
+</declaration><location id="id13" x="-352" y="-192"></location><location id="id14" x="0" y="-192"><name x="24" y="-200">BUSY</name><committed/></location><location id="id15" x="-192" y="-192"><name x="-240" y="-184">IDLE</name></location><init ref="id13"/><transition><source ref="id13"/><target ref="id15"/><label kind="guard" x="-336" y="-224">isConcreteHA[h]</label><label kind="synchronisation" x="-336" y="-208">urg!</label><nail x="-208" y="-192"/></transition><transition><source ref="id14"/><target ref="id15"/><label kind="guard" x="8" y="-312">answer.senderIP==zero
+&amp;&amp; do_reset</label><label kind="synchronisation" x="8" y="-280">reset[h]!</label><label kind="assignment" x="8" y="-264">do_reset:=false</label><nail x="0" y="-344"/><nail x="-232" y="-344"/><nail x="-232" y="-240"/></transition><transition><source ref="id14"/><target ref="id15"/><label kind="guard" x="8" y="-176">answer.senderIP!=zero</label><label kind="synchronisation" x="8" y="-160">send_answer[network]!</label><label kind="assignment" x="8" y="-144">packet:=answer,
+initialize(answer),
+network:=ha0</label><nail x="0" y="-104"/><nail x="-192" y="-104"/></transition><transition><source ref="id14"/><target ref="id15"/><label kind="guard" x="-200" y="-304">answer.senderIP==zero
+&amp;&amp; !do_reset</label><nail x="-48" y="-264"/><nail x="-192" y="-264"/></transition><transition><source ref="id15"/><target ref="id14"/><label kind="select" x="-168" y="-224">b:BOOL,
+s:HAtype</label><label kind="synchronisation" x="-168" y="-192">receive_msg[s][h]?</label><label kind="assignment" x="-168" y="-176">ihandler(b),
+network:=s</label></transition></template><system>system Config, InputHandler,Network,Initializer,Chaos;</system></nta>

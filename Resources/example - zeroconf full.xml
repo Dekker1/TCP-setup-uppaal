@@ -1,0 +1,207 @@
+<?xml version="1.0" encoding="utf-8"?><!DOCTYPE nta PUBLIC '-//Uppaal Team//DTD Flat System 1.1//EN' 'http://www.it.uu.se/research/group/darts/uppaal/flat-1_1.dtd'><nta><declaration>//
+// CONSTANTS FROM RFC 3927 www.ietf.org/rfc/rfc3927.txt
+//
+// The following 10 constant declarations are copied almost verbatim from Section 9 
+//   "The following timing constants are used in this protocol; they are
+//   not intended to be user configurable."
+const int    PROBE_WAIT          = 1; // second   (initial random  delay)
+const int    PROBE_NUM           = 3; //          (number of probe packets)
+const int    PROBE_MIN           = 1; // second   (minimum delay till repeated probe)
+const int    PROBE_MAX           = 2; // seconds  (maximum delay till repeated probe)
+const int    ANNOUNCE_WAIT       = 2; // seconds  (delay before announcing)
+const int    ANNOUNCE_NUM        = 2; //          (number of announcement packets)
+const int    ANNOUNCE_INTERVAL   = 2; // seconds  (time between announcement packets)
+const int    MAX_CONFLICTS       = 10; //         (max conflicts before rate limiting)
+const int    RATE_LIMIT_INTERVAL = 60; // second  (delay between successive attempts)
+const int    DEFEND_INTERVAL     = 10; // seconds (minimum interval between defensive ARPs).
+
+//The following constants specify the dimensions of the model
+const int    l 		  = 2; // number of hardware addresses (including all zeroes address)
+
+const int    m 	      	  = 2; // number of available link local IP addresses
+			       //real value is 65024 but simulator can't handle that
+const int    n		  = 3; // number of network automata
+
+typedef scalar[l] HAtype;
+typedef scalar[m+1] IPtype; //an IP address in our model is either a link local address or the zero address
+IPtype zero;
+typedef scalar[n] Networktype;
+
+IPtype IP[HAtype];  // array recording (guessed) IP address for each host, zero means no address guessed
+bool UseIP[HAtype]; // array recording whether host is using an IP address
+
+// channels to send messages to network, reset a host, receive messages from network, and to send answers back to network
+chan send_req,reset[HAtype],receive_msg[Networktype][HAtype],send_answer[Networktype];
+
+// trick to make certain transitions urgent
+urgent broadcast chan urg;
+
+typedef struct{
+  HAtype senderHA; // sender hardware address
+  IPtype senderIP; // sender IP address
+  IPtype targetIP; // target IP address
+  bool request;    // is the packet a Request or a Reply
+}ARP_packet;
+
+meta HAtype ha0;
+void initialize(ARP_packet&amp; p)
+{
+ p.senderHA := ha0;
+ p.senderIP := zero;
+ p.targetIP := zero;
+ p.request  := false;
+}
+
+//meta because it is used only for value passing in synchronizations 
+meta ARP_packet packet;
+</declaration><template><name x="-232" y="-768">Config</name><parameter>const HAtype h</parameter><declaration>clock x;
+
+int [0,PROBE_NUM] counter;          //number of probes or gratuitous ARP that have been sent
+int [0,MAX_CONFLICTS] ConflictNum;  //the number of times an address collision has occurred</declaration><location id="id0" x="264" y="-256"><name x="272" y="-248">PRE_CLAIM</name><label kind="invariant" x="272" y="-232">x&lt;=ANNOUNCE_WAIT</label></location><location id="id1" x="-88" y="-256"><name x="-72" y="-248">WAIT</name><label kind="invariant" x="-72" y="-232">x&lt;=PROBE_WAIT</label><label kind="comments">When ready to begin probing, the host should then wait for a random
+time interval selected uniformly in the range zero to PROBE_WAIT
+seconds</label></location><location id="id2" x="184" y="-56"><name x="200" y="-56">COLLISION</name><label kind="comments">A host should maintain a counter of the number of address conflicts
+it has experienced in the process of trying to acquire an address,
+and if the number of conflicts exceeds MAX_CONFLICTS then the host
+MUST limit the rate at which it probes for new addresses to no more
+than one new address per RATE_LIMIT_INTERVAL.  This is to prevent
+catastrophic ARP storms in pathological failure cases, such as a
+rogue host that answers all ARP Probes, causing legitimate hosts to
+go into an infinite loop attempting to select a usable address.</label></location><location id="id3" x="72" y="-256"><name x="88" y="-248">PROBE</name><label kind="invariant" x="88" y="-232">x &lt;= PROBE_MAX</label><label kind="comments">and should then send PROBE_NUM probe packets, each of these
+probe packets spaced randomly, PROBE_MIN to PROBE_MAX seconds apart.</label></location><location id="id4" x="-88" y="32"><name x="-72" y="40">INIT</name></location><location id="id5" x="488" y="-256"><name x="496" y="-248">CLAIMED</name><label kind="invariant" x="496" y="-232">counter &lt; ANNOUNCE_NUM
+imply
+x&lt;=ANNOUNCE_INTERVAL</label><label kind="comments">Having probed to determine a unique address to use, the host MUST
+then announce its claimed address by broadcasting ANNOUNCE_NUM ARP
+announcements, spaced ANNOUNCE_INTERVAL seconds apart.  An ARP
+announcement is identical to the ARP Probe described above, except
+that now the sender and target IP addresses are both set to the
+host's newly selected IPv4 address.  The purpose of these ARP
+announcements is to make sure that other hosts on the link do not
+have stale ARP cache entries left over from some other host that may
+previously have been using the same address.</label></location><init ref="id4"/><transition><source ref="id5"/><target ref="id4"/><label kind="synchronisation" x="496" y="-152">reset[h]?</label><label kind="assignment" x="496" y="-136">UseIP[h]:=false,
+IP[h]:=zero,
+x:=0</label><nail x="488" y="32"/></transition><transition><source ref="id1"/><target ref="id2"/><label kind="synchronisation" x="0" y="-208">reset[h]?</label><label kind="assignment" x="0" y="-192">IP[h]:=zero,
+x:=0</label><label kind="comments">When a host wishes to configure an IPv4 Link-Local address, it
+selects an address using a pseudo-random number generator with a uniform distribution in the range from 169.254.1.0 to 169.254.254.255 inclusive.
+
+The IPv4 prefix 169.254/16 is registered with the IANA for this
+purpose.  The first 256 and last 256 addresses in the 169.254/16 prefix are reserved for future use and MUST NOT be selected by a host using this dynamic configuration mechanism.</label><nail x="-64" y="-200"/></transition><transition><source ref="id0"/><target ref="id2"/><label kind="synchronisation" x="224" y="-152">reset[h]?</label><label kind="assignment" x="224" y="-136">IP[h]:=zero,
+x:=0</label></transition><transition><source ref="id3"/><target ref="id0"/><label kind="guard" x="88" y="-312">counter==PROBE_NUM</label><label kind="synchronisation" x="88" y="-296">urg!</label><label kind="assignment" x="88" y="-280">x:=0</label></transition><transition><source ref="id1"/><target ref="id3"/><label kind="assignment" x="-72" y="-288">x:=PROBE_MAX,
+counter:=0</label></transition><transition><source ref="id2"/><target ref="id4"/><label kind="guard" x="128" y="-24">ConflictNum &gt;= MAX_CONFLICTS &amp;&amp;
+x&gt;=RATE_LIMIT_INTERVAL</label><nail x="88" y="0"/></transition><transition><source ref="id3"/><target ref="id2"/><label kind="synchronisation" x="128" y="-192">reset[h]?</label><label kind="assignment" x="128" y="-176">IP[h]:=zero,
+x:=0</label><nail x="80" y="-216"/></transition><transition><source ref="id3"/><target ref="id3"/><label kind="guard" x="40" y="-456">counter&lt;PROBE_NUM &amp;&amp;
+x&gt;=PROBE_MIN</label><label kind="synchronisation" x="40" y="-424">send_req!</label><label kind="assignment" x="40" y="-408">packet.senderHA:=h,
+packet.senderIP:=zero,
+packet.targetIP:=IP[h],
+packet.request:=true,
+counter++,
+x:=0</label><label kind="comments">A host probes to see if an address is already in use by broadcasting
+an ARP Request for the desired address.  The client MUST fill in the
+`sender hardware address' field of the ARP Request with the hardware
+address of the interface through which it is sending the packet.  The
+`sender IP address' field MUST be set to all zeroes, to avoid
+polluting ARP caches in other hosts on the same link in the case
+where the address turns out to be already in use by another host.
+The `target hardware address' field is ignored and SHOULD be set to
+all zeroes.  The `target IP address' field MUST be set to the address
+being probed.  An ARP Request constructed this way with an all-zero
+`sender IP address' is referred to as an "ARP Probe".</label><nail x="40" y="-320"/><nail x="72" y="-320"/></transition><transition><source ref="id4"/><target ref="id1"/><label kind="select" x="-80" y="-136">guess:IPtype</label><label kind="guard" x="-80" y="-120">guess!=zero</label><label kind="assignment" x="-80" y="-104">IP[h]:=guess,
+x:=0</label><label kind="comments">When a host wishes to configure an IPv4 Link-Local address, it
+selects an address using a pseudo-random number generator with a
+uniform distribution in the range from 169.254.1.0 to 169.254.254.255
+inclusive.</label></transition><transition><source ref="id5"/><target ref="id5"/><label kind="guard" x="456" y="-472">counter &lt; ANNOUNCE_NUM &amp;&amp;
+x== ANNOUNCE_INTERVAL</label><label kind="synchronisation" x="456" y="-440">send_req!</label><label kind="assignment" x="456" y="-424">packet.senderHA:=h,
+packet.senderIP:=IP[h],
+packet.targetIP:=IP[h],
+packet.request:=true,
+counter++,
+x:=0,
+UseIP[h]:=true</label><label kind="comments">the term "ARP Announcement" is used to refer to an
+ARP Request packet, broadcast on the local link, identical to the ARP
+Probe described above, except that both the sender and target IP
+address fields contain the IP address being announced</label><nail x="456" y="-320"/><nail x="488" y="-320"/></transition><transition><source ref="id0"/><target ref="id5"/><label kind="guard" x="280" y="-320">x==ANNOUNCE_WAIT</label><label kind="assignment" x="280" y="-304">ConflictNum:=0,
+x:=ANNOUNCE_INTERVAL,
+counter:=0</label><label kind="comments">If, by ANNOUNCE_WAIT seconds after the transmission of the last ARP
+Probe no conflicting ARP Reply or ARP Probe has been received, then
+the host has successfully claimed the desired IPv4 Link-Local address.</label></transition><transition><source ref="id2"/><target ref="id4"/><label kind="guard" x="-64" y="-64">ConflictNum &lt; MAX_CONFLICTS</label><label kind="synchronisation" x="-64" y="-48">urg!</label><label kind="assignment" x="-64" y="-32">ConflictNum++</label></transition></template><template><name>Regular</name><parameter>const HAtype h</parameter><location id="id6" x="-264" y="-320"><name x="-274" y="-350">INIT</name><label kind="comments">A host that is using an IP address may send
+regular ARP request messages.</label></location><init ref="id6"/><transition><source ref="id6"/><target ref="id6"/><label kind="select" x="-184" y="-376">address:IPtype</label><label kind="guard" x="-184" y="-360">UseIP[h] &amp;&amp; address!=zero &amp;&amp; address!=IP[h]</label><label kind="synchronisation" x="-184" y="-344">send_req!</label><label kind="assignment" x="-184" y="-328">packet.senderHA:=h,
+packet.senderIP:=IP[h],
+packet.targetIP:=address,
+packet.request:=true</label><nail x="-192" y="-352"/><nail x="-192" y="-288"/></transition></template><template><name x="5" y="5">InputHandler</name><parameter>const HAtype h</parameter><declaration>clock y;
+ARP_packet answer;
+Networktype network;
+bool do_reset;
+
+void ihandler(bool defend)
+{
+  if (IP[h]==zero) // Scenario A: I have not selected an IP address
+    ;
+  else if (packet.senderHA==h) // Scenario B: I have sent the packet myself
+    ;
+  else if (packet.senderIP==IP[h]) //There is a conflict: somebody else is using my address!
+  {
+    if (not UseIP[h]) // Scenario C: select a new address
+      do_reset:=true;
+    else if (defend) // Scenario D: I am going to defend my address
+    {
+      answer.senderHA:=h;
+      answer.senderIP:=IP[h];
+      answer.targetIP:=IP[h];
+      answer.request:=true;
+      y:=0;
+    }
+    else  // Scenario E: I will not defend my address
+      do_reset:=true;
+  }
+  else if (not UseIP[h])
+  {
+    if (packet.targetIP==IP[h] &amp;&amp; packet.request &amp;&amp; packet.senderIP==zero) // Scenario F: conflicting probe
+      do_reset:=true;
+    else  //Scenario G: Packet is not conflicting with IP address that I want to use
+      ;
+  }
+  else // Packet is not conflicting with IP address that I am using
+  {
+    if (packet.targetIP==IP[h] &amp;&amp; packet.request) // Scenario H: answer regular ARP request 
+    {
+      answer.senderHA:=h;
+      answer.senderIP:=IP[h];
+      answer.targetIP:=packet.senderIP;
+      answer.request:=false;
+    }
+    else // Scenario I: no reply message required
+      ; 
+  }		
+}
+</declaration><location id="id7" x="0" y="-192"><name x="24" y="-200">BUSY</name><committed/></location><location id="id8" x="-416" y="-192"><name x="-432" y="-224">INIT</name><committed/></location><location id="id9" x="-192" y="-192"><name x="-240" y="-216">IDLE</name></location><init ref="id8"/><transition><source ref="id7"/><target ref="id9"/><label kind="guard" x="48" y="-328">answer.senderIP==zero
+&amp;&amp; do_reset</label><label kind="synchronisation" x="48" y="-296">reset[h]!</label><label kind="assignment" x="48" y="-280">do_reset:=false</label><nail x="40" y="-248"/><nail x="40" y="-328"/><nail x="-232" y="-328"/><nail x="-232" y="-240"/></transition><transition><source ref="id7"/><target ref="id9"/><label kind="guard" x="16" y="-160">answer.senderIP!=zero</label><label kind="synchronisation" x="16" y="-144">send_answer[network]!</label><label kind="assignment" x="16" y="-128">packet:=answer,
+initialize(answer)</label><nail x="0" y="-80"/><nail x="-192" y="-80"/></transition><transition><source ref="id7"/><target ref="id9"/><label kind="guard" x="-192" y="-320">answer.senderIP==zero
+&amp;&amp; !do_reset</label><nail x="0" y="-288"/><nail x="-192" y="-288"/></transition><transition><source ref="id9"/><target ref="id7"/><label kind="select" x="-176" y="-280">w:Networktype</label><label kind="synchronisation" x="-176" y="-264">receive_msg[w][h]?</label><label kind="assignment" x="-176" y="-248">ihandler(false),
+network:=w</label><nail x="-96" y="-208"/></transition><transition><source ref="id8"/><target ref="id9"/><label kind="assignment" x="-392" y="-184">y:=DEFEND_INTERVAL+1,
+initialize(answer)</label></transition><transition><source ref="id9"/><target ref="id7"/><label kind="select" x="-168" y="-168">w:Networktype</label><label kind="guard" x="-168" y="-152">y&gt;DEFEND_INTERVAL</label><label kind="synchronisation" x="-168" y="-136">receive_msg[w][h]?</label><label kind="assignment" x="-168" y="-120">ihandler(true),
+network:=w</label><nail x="-96" y="-176"/></transition></template><template><name>Network</name><parameter>const Networktype w</parameter><declaration>clock z;
+bool send[HAtype];
+bool answer[HAtype];
+
+ARP_packet s_buffer;
+ARP_packet a_buffer;
+
+void set(bool&amp; a[HAtype]) {
+  for(i:HAtype){a[i]:=true;}
+}
+
+
+</declaration><location id="id10" x="416" y="160"><name x="432" y="168">BUSY</name><label kind="invariant" x="432" y="184">z&lt;=1</label><label kind="comments">This specification applies to all IEEE 802 Local Area Networks (LANs)
+[802], including Ethernet [802.3], Token-Ring [802.5] and IEEE 802.11
+wireless LANs [802.11], as well as to other link-layer technologies
+that operate at data rates of at least 1 Mbps, have a round-trip
+latency of at most one second, and support ARP [RFC826].
+All ARP packets (*replies* as well as requests) that contain a Link-
+   Local 'sender IP address' MUST be sent using link-layer broadcast
+   instead of link-layer unicast.  This aids timely detection of
+   duplicate addresses.</label></location><location id="id11" x="224" y="160"><name x="184" y="168">IDLE</name></location><init ref="id11"/><transition><source ref="id11"/><target ref="id11"/><label kind="synchronisation" x="232" y="32">send_answer[w]?</label><nail x="224" y="32"/><nail x="192" y="32"/></transition><transition><source ref="id10"/><target ref="id10"/><label kind="guard" x="424" y="16">a_buffer.senderIP==zero</label><label kind="synchronisation" x="424" y="32">send_answer[w]?</label><label kind="assignment" x="424" y="48">a_buffer:=packet,
+set(answer)</label><nail x="416" y="32"/><nail x="384" y="32"/></transition><transition><source ref="id10"/><target ref="id10"/><label kind="select" x="424" y="232">a:HAtype</label><label kind="guard" x="424" y="248">answer[a]==true</label><label kind="synchronisation" x="424" y="264">receive_msg[w][a]!</label><label kind="assignment" x="424" y="280">answer[a]:=false,
+packet:=a_buffer</label><nail x="416" y="288"/><nail x="384" y="288"/></transition><transition><source ref="id10"/><target ref="id10"/><label kind="select" x="520" y="104">a:HAtype</label><label kind="guard" x="520" y="120">send[a]==true</label><label kind="synchronisation" x="520" y="136">receive_msg[w][a]!</label><label kind="assignment" x="520" y="152">send[a]:=false,
+packet:=s_buffer</label><nail x="512" y="160"/><nail x="512" y="120"/></transition><transition><source ref="id10"/><target ref="id11"/><label kind="guard" x="80" y="208">forall (a:HAtype) !send[a] &amp;&amp; !answer[a]</label><label kind="synchronisation" x="312" y="192">urg!</label><label kind="assignment" x="216" y="224">initialize(s_buffer),
+initialize(a_buffer)</label><nail x="320" y="192"/></transition><transition><source ref="id11"/><target ref="id10"/><label kind="synchronisation" x="248" y="96">send_req?</label><label kind="assignment" x="248" y="112">s_buffer:=packet,
+set(send),
+z:=0</label></transition></template><system>system Config, InputHandler,Regular,Network;</system></nta>
