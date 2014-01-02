@@ -88,5 +88,5 @@ Network4 = Network(0);
 Host1Handshake = Host_Handshake(1,2,0);
 Host2Handshake = Host_Handshake(2,1,0);
 
-system Network1, Network2, Network3,Host1Handshake,Host2Handshake;
+system Network1, Network2, Network3, Network4, Host1Handshake,Host2Handshake;
 </system></nta>
