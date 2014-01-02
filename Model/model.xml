@@ -1,28 +1,84 @@
 <?xml version="1.0" encoding="utf-8"?><!DOCTYPE nta PUBLIC '-//Uppaal Team//DTD Flat System 1.1//EN' 'http://www.it.uu.se/research/group/darts/uppaal/flat-1_1.dtd'><nta><declaration>// Place global declarations here.
 const int HOSTS = 2;
-const int alpha = 8;
-const int beta = 15;
+// TIMEOUT Bounds
 const int UBOUND = 600;
 const int LBOUND = 10;
+// sequence bounds
+const int MAX_SEQ = 3;
 
-chan SYN[HOSTS+1], ACK[HOSTS+1], SYN_ACK[HOSTS+1];
+chan Packet[HOSTS+1];
 
-int target_address; //Global variable to pass the target address to the network</declaration><template><name>Network</name><parameter>const int network</parameter><declaration>int target; // the target for the current network packet
+int target_address; //Global variable to pass the target address to the network
+
+typedef struct {
+	int syn;
+	int ack;
+} TCP_packet;
+
+void initialize(TCP_packet&amp; p)
+{
+ p.syn := 0;
+ p.ack := 0;
+}
+
+TCP_packet packet;</declaration><template><name>Network</name><parameter>const int network</parameter><declaration>int target; // the target for the current network packet
+TCP_packet transfer;
 
 
 void set_target() {
     target = target_address;
 }
 
-</declaration><location id="id0" x="-960" y="-928"><name x="-970" y="-958">PacketLost</name><committed/></location><location id="id1" x="-1216" y="-640"><name x="-1384" y="-656">SynAckPacketInTransit</name></location><location id="id2" x="-704" y="-640"><name x="-688" y="-656">AckPacketInTransit</name></location><location id="id3" x="-960" y="-864"><name x="-1104" y="-888">SynPacketInTransit</name></location><location id="id4" x="-960" y="-608"><name x="-1008" y="-584">ReadyToReceive</name></location><init ref="id4"/><transition><source ref="id0"/><target ref="id4"/><nail x="-800" y="-800"/></transition><transition><source ref="id3"/><target ref="id0"/></transition><transition><source ref="id2"/><target ref="id0"/><nail x="-704" y="-928"/></transition><transition><source ref="id1"/><target ref="id0"/><nail x="-1216" y="-928"/></transition><transition><source ref="id1"/><target ref="id4"/><label kind="synchronisation" x="-1144" y="-576">SYN_ACK[target]!</label><nail x="-1216" y="-576"/></transition><transition><source ref="id2"/><target ref="id4"/><label kind="synchronisation" x="-832" y="-584">ACK[target]!</label><nail x="-704" y="-576"/></transition><transition><source ref="id3"/><target ref="id4"/><label kind="synchronisation" x="-928" y="-784">SYN[target]!</label><nail x="-928" y="-864"/></transition><transition><source ref="id4"/><target ref="id1"/><label kind="synchronisation" x="-1192" y="-672">SYN_ACK[network]?</label><label kind="assignment" x="-1168" y="-656">set_target()</label></transition><transition><source ref="id4"/><target ref="id2"/><label kind="synchronisation" x="-848" y="-672">ACK[network]?</label><label kind="assignment" x="-840" y="-656">set_target()</label></transition><transition><source ref="id4"/><target ref="id3"/><label kind="synchronisation" x="-1136" y="-784">SYN[network]?</label><label kind="assignment" x="-1136" y="-768">set_target()</label><nail x="-992" y="-864"/></transition></template><template><name>Host_Handshake</name><parameter>const int local, const int remote, const int network</parameter><declaration>clock c;
-
-void set_target() {
-    target_address = remote;
+void receive_packet(){
+	transfer := packet;
 }
-</declaration><location id="id5" x="-288" y="64"></location><location id="id6" x="-96" y="0"><committed/></location><location id="id7" x="-384" y="-96"><committed/></location><location id="id8" x="-672" y="-192"><committed/></location><location id="id9" x="-384" y="0"><name x="-416" y="16">Established</name></location><location id="id10" x="-672" y="-96"><name x="-752" y="-104">SynRcvd</name></location><location id="id11" x="-96" y="-96"><name x="-56" y="-136">SynSent</name><label kind="invariant" x="-64" y="-120">c &lt;= UBOUND</label></location><location id="id12" x="-384" y="-192"><name x="-400" y="-232">Listen</name></location><location id="id13" x="-384" y="-384"><name x="-456" y="-384">Closed</name></location><init ref="id13"/><transition><source ref="id5"/><target ref="id9"/><label kind="synchronisation" x="-304" y="24">ACK[network]!</label><nail x="-320" y="32"/></transition><transition><source ref="id9"/><target ref="id5"/><label kind="synchronisation" x="-416" y="72">SYN_ACK[local]?</label><nail x="-352" y="64"/></transition><transition><source ref="id11"/><target ref="id11"/><label kind="guard" x="40" y="-104">c &gt; LBOUND</label><label kind="synchronisation" x="40" y="-88">SYN[network]!</label><label kind="assignment" x="40" y="-72">c := 0</label><nail x="32" y="-64"/><nail x="32" y="-96"/></transition><transition><source ref="id13"/><target ref="id13"/><label kind="synchronisation" x="-544" y="-440">ACK[local]?</label><nail x="-512" y="-384"/><nail x="-512" y="-416"/></transition><transition><source ref="id13"/><target ref="id13"/><label kind="synchronisation" x="-368" y="-536">SYN[local]?</label><nail x="-320" y="-512"/><nail x="-352" y="-512"/></transition><transition><source ref="id13"/><target ref="id13"/><label kind="synchronisation" x="-496" y="-536">SYN_ACK[local]?</label><nail x="-448" y="-512"/><nail x="-416" y="-512"/></transition><transition><source ref="id6"/><target ref="id9"/><label kind="synchronisation" x="-272" y="-40">ACK[network]!</label><label kind="assignment" x="-272" y="-24">set_target()</label></transition><transition><source ref="id7"/><target ref="id10"/><label kind="synchronisation" x="-520" y="-144">ACK[network]!</label><label kind="assignment" x="-520" y="-128">set_target(),
-c := 0</label></transition><transition><source ref="id8"/><target ref="id10"/><label kind="synchronisation" x="-664" y="-176">SYN_ACK[network]!</label><label kind="assignment" x="-664" y="-160">set_target()</label></transition><transition><source ref="id12"/><target ref="id8"/><label kind="synchronisation" x="-552" y="-216">SYN[local]?</label></transition><transition><source ref="id11"/><target ref="id6"/><label kind="synchronisation" x="-88" y="-56">SYN_ACK[local]?</label></transition><transition><source ref="id11"/><target ref="id7"/><label kind="synchronisation" x="-256" y="-120">SYN[local]?</label></transition><transition><source ref="id12"/><target ref="id11"/><label kind="synchronisation" x="-272" y="-232">SYN[network]!</label><label kind="assignment" x="-272" y="-216">set_target()</label><nail x="-128" y="-192"/><nail x="-128" y="-128"/></transition><transition><source ref="id10"/><target ref="id9"/><label kind="synchronisation" x="-552" y="-24">ACK[local]?</label><nail x="-672" y="0"/></transition><transition><source ref="id11"/><target ref="id13"/><nail x="-64" y="-128"/><nail x="-64" y="-416"/><nail x="-352" y="-416"/></transition><transition><source ref="id13"/><target ref="id11"/><label kind="synchronisation" x="-208" y="-384">SYN[network]!</label><label kind="assignment" x="-208" y="-368">set_target(),
-c := 0</label><nail x="-96" y="-384"/></transition><transition><source ref="id12"/><target ref="id13"/><nail x="-352" y="-224"/><nail x="-352" y="-352"/></transition><transition><source ref="id13"/><target ref="id12"/><nail x="-416" y="-352"/><nail x="-416" y="-224"/></transition></template><system>Network1 = Network(0);
+
+void send_packet(){
+	packet := transfer;
+}
+</declaration><location id="id0" x="-672" y="-736"><name x="-682" y="-766">PacketLost</name><committed/></location><location id="id1" x="-864" y="-864"><name x="-1008" y="-888">PacketInTransit</name></location><location id="id2" x="-864" y="-608"><name x="-912" y="-584">ReadyToReceive</name></location><init ref="id2"/><transition><source ref="id0"/><target ref="id2"/></transition><transition><source ref="id1"/><target ref="id2"/><label kind="synchronisation" x="-976" y="-768">Packet[target]!</label><label kind="assignment" x="-968" y="-752">send_packet()</label></transition><transition><source ref="id2"/><target ref="id1"/><label kind="synchronisation" x="-1120" y="-784">Packet[network]?</label><label kind="assignment" x="-1120" y="-768">set_target(),
+receive_packet()</label><nail x="-992" y="-608"/><nail x="-992" y="-864"/><nail x="-992" y="-864"/></transition></template><template><name>Host_Handshake</name><parameter>const int local, const int remote, const int network</parameter><declaration>clock c;
+int last_syn = 0;
+int last_ack = 0;
+TCP_packet received;
+
+void set_target(int syn, int ack) {
+	target_address = remote;
+	packet.syn = syn;
+	packet.ack = ack;
+}
+
+void receive_packet(){
+	received = packet;
+}
+
+int update_syn(){
+	last_syn = (last_syn % MAX_SEQ) +1;
+	return last_syn;
+}
+
+int update_ack(){
+	last_ack = received.syn;
+	return last_ack;
+}
+
+void initialize()
+{
+	last_syn := 0;
+	last_ack := 0;
+}</declaration><location id="id3" x="-96" y="0"><committed/></location><location id="id4" x="-384" y="-96"><committed/></location><location id="id5" x="-672" y="-192"><committed/></location><location id="id6" x="-384" y="0"><name x="-416" y="16">Established</name></location><location id="id7" x="-672" y="-96"><name x="-752" y="-104">SynRcvd</name></location><location id="id8" x="-96" y="-96"><name x="-56" y="-136">SynSent</name><label kind="invariant" x="-64" y="-120">c &lt;= UBOUND</label></location><location id="id9" x="-384" y="-192"><name x="-400" y="-232">Listen</name></location><location id="id10" x="-384" y="-384"><name x="-456" y="-384">Closed</name></location><init ref="id10"/><transition><source ref="id6"/><target ref="id6"/><nail x="-432" y="64"/><nail x="-352" y="64"/></transition><transition><source ref="id8"/><target ref="id8"/><label kind="guard" x="40" y="-104">c &gt; LBOUND</label><label kind="synchronisation" x="40" y="-88">Packet[network]!</label><label kind="assignment" x="40" y="-72">set_target(last_syn, 0),
+c := 0</label><nail x="32" y="-64"/><nail x="32" y="-96"/></transition><transition><source ref="id10"/><target ref="id10"/><label kind="synchronisation" x="-480" y="-512">Packet[local]?</label><nail x="-368" y="-496"/><nail x="-400" y="-496"/></transition><transition><source ref="id3"/><target ref="id6"/><label kind="synchronisation" x="-288" y="-40">Packet[network]!</label><label kind="assignment" x="-328" y="-24">set_target(0, update_ack())</label></transition><transition><source ref="id4"/><target ref="id7"/><label kind="synchronisation" x="-520" y="-144">Packet[network]!</label><label kind="assignment" x="-560" y="-128">set_target(0, update_ack()),
+c := 0</label></transition><transition><source ref="id5"/><target ref="id7"/><label kind="synchronisation" x="-808" y="-176">Packet[network]!</label><label kind="assignment" x="-952" y="-160">set_target(update_syn(), update_ack()),
+c := 0</label></transition><transition><source ref="id9"/><target ref="id5"/><label kind="guard" x="-584" y="-240">packet.syn != 0 &amp;&amp;
+packet.ack == 0</label><label kind="synchronisation" x="-584" y="-256">Packet[local]?</label><label kind="assignment" x="-584" y="-216">receive_packet()</label></transition><transition><source ref="id8"/><target ref="id3"/><label kind="guard" x="-88" y="-40">packet.ack == last_syn &amp;&amp;
+packet.syn != 0</label><label kind="synchronisation" x="-88" y="-56">Packet[local]?</label><label kind="assignment" x="-72" y="-8">receive_packet()</label></transition><transition><source ref="id8"/><target ref="id4"/><label kind="guard" x="-288" y="-144">packet.syn != 0 &amp;&amp;
+packet.ack == 0</label><label kind="synchronisation" x="-288" y="-160">Packet[local]?</label><label kind="assignment" x="-288" y="-120">receive_packet()</label></transition><transition><source ref="id9"/><target ref="id8"/><label kind="synchronisation" x="-296" y="-232">Packet[network]!</label><label kind="assignment" x="-320" y="-216">set_target(update_syn(), 0)</label><nail x="-128" y="-192"/><nail x="-128" y="-128"/></transition><transition><source ref="id7"/><target ref="id6"/><label kind="guard" x="-608" y="-56">packet.ack == last_syn &amp;&amp;
+packet.syn == 0</label><label kind="synchronisation" x="-608" y="-72">Packet[local]?</label><label kind="assignment" x="-608" y="-24">receive_packet()</label><nail x="-672" y="0"/></transition><transition><source ref="id8"/><target ref="id10"/><nail x="-64" y="-128"/><nail x="-64" y="-416"/><nail x="-352" y="-416"/></transition><transition><source ref="id10"/><target ref="id8"/><label kind="synchronisation" x="-240" y="-384">Packet[network]!</label><label kind="assignment" x="-240" y="-368">initialize(),
+set_target(update_syn(), 0),
+c := 0</label><nail x="-96" y="-384"/></transition><transition><source ref="id9"/><target ref="id10"/><nail x="-352" y="-224"/><nail x="-352" y="-352"/></transition><transition><source ref="id10"/><target ref="id9"/><label kind="assignment" x="-488" y="-296">initialize()</label><nail x="-416" y="-352"/><nail x="-416" y="-224"/></transition></template><system>Network1 = Network(0);
 Network2 = Network(0);
+Network3 = Network(0);
+Network4 = Network(0);
 Host1Handshake = Host_Handshake(1,2,0);
 Host2Handshake = Host_Handshake(2,1,0);
 

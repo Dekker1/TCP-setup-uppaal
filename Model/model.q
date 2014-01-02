@@ -3,4 +3,14 @@
 /*
 
 */
+A[] not deadlock
+
+/*
+
+*/
+E<> (Host1Handshake.Established and Host2Handshake.Established)
+
+/*
+
+*/
 A[] not (Host1Handshake.Closed and Host2Handshake.Established)
