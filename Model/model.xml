@@ -26,7 +26,7 @@ TCP_packet from_network;</declaration><template><name>Network</name><parameter>c
 TCP_packet transfer;
 
 void set_target() {
-    target = target_address;
+	target = target_address;
 }
 
 void receive_packet(){
@@ -38,7 +38,7 @@ void send_packet(){
 	from_network := transfer;
 }
 </declaration><location id="id0" x="-5312" y="-1536"><committed/></location><location id="id1" x="-5152" y="-1664"><name x="-5160" y="-1696">PacketLost</name><committed/></location><location id="id2" x="-5312" y="-1664"><name x="-5360" y="-1696">PacketInTransit</name></location><location id="id3" x="-5312" y="-1408"><name x="-5360" y="-1384">ReadyToReceive</name></location><init ref="id3"/><transition><source ref="id0"/><target ref="id2"/><label kind="assignment" x="-5296" y="-1560">initialize(from_network)</label><nail x="-5280" y="-1592"/></transition><transition><source ref="id0"/><target ref="id3"/><label kind="synchronisation" x="-5400" y="-1480">Packet[target]!</label></transition><transition><source ref="id2"/><target ref="id0"/><label kind="assignment" x="-5400" y="-1608">send_packet()</label></transition><transition><source ref="id2"/><target ref="id1"/></transition><transition><source ref="id1"/><target ref="id3"/><nail x="-5152" y="-1408"/></transition><transition><source ref="id3"/><target ref="id2"/><label kind="synchronisation" x="-5432" y="-1560">Packet[network]?</label><label kind="assignment" x="-5432" y="-1544">set_target(),
-receive_packet()</label><nail x="-5440" y="-1408"/><nail x="-5440" y="-1664"/><nail x="-5440" y="-1664"/></transition></template><template><name>Host_Handshake</name><parameter>const int local, const int remote, const int network</parameter><declaration>clock c;
+receive_packet()</label><nail x="-5440" y="-1408"/><nail x="-5440" y="-1664"/></transition></template><template><name>Host_Handshake</name><parameter>const int local, const int remote, const int network</parameter><declaration>clock c;
 int last_syn = 0;
 int last_ack = 0;
 int retrans_syn;
