@@ -48,29 +48,25 @@ void send_packet(){
 </declaration><location id="id0" x="-5312" y="-1536"><committed/></location><location id="id1" x="-5152" y="-1664"><name x="-5160" y="-1696">PacketLost</name><committed/></location><location id="id2" x="-5312" y="-1664"><name x="-5360" y="-1696">PacketInTransit</name></location><location id="id3" x="-5312" y="-1408"><name x="-5360" y="-1384">ReadyToReceive</name></location><init ref="id3"/><transition><source ref="id0"/><target ref="id2"/><label kind="assignment" x="-5296" y="-1560">initialize(from_network)</label><nail x="-5280" y="-1592"/></transition><transition><source ref="id0"/><target ref="id3"/><label kind="synchronisation" x="-5304" y="-1488">Packet[target]!</label></transition><transition><source ref="id2"/><target ref="id0"/><label kind="guard" x="-5384" y="-1624">c &lt;= TTL</label><label kind="assignment" x="-5416" y="-1608">send_packet()</label></transition><transition><source ref="id2"/><target ref="id1"/></transition><transition><source ref="id1"/><target ref="id3"/><nail x="-5152" y="-1408"/></transition><transition><source ref="id3"/><target ref="id2"/><label kind="synchronisation" x="-5432" y="-1560">Packet[network]?</label><label kind="assignment" x="-5432" y="-1544">set_target(),
 receive_packet(),
 c:=0</label><nail x="-5440" y="-1408"/><nail x="-5440" y="-1664"/></transition></template><template><name>Host_Handshake</name><parameter>const int local, const int remote, const int network</parameter><declaration>clock c;
-meta int una = 0;
+meta int snd_una = 0;
 meta int snd_nxt = 0;
-meta int len = 0;
+meta int seg_ack = 0;
+meta int seg_len = 0;
 meta int rcv_nxt = 0;
 meta TCP_segment retrans;
 meta TCP_segment received;
 
-void receive_packet(){
+bool receive_packet(){
 	received := from_network;
+	snd_nxt = received.ackNr;
+	seg_ack = (received.seqNr + 1 + len)%MAX_SEQ;
+
 	initialize(from_network);
 }
 
-int update_seq(bool syn){
-	
-	last_seq = (last_seq % MAX_SEQ) +1;
-	return last_seq;
-}
-
-int update_ack(bool ack){
-	if(!ack)
-		return 0;
-	last_ack = received.seqNr;
-	return last_ack;
+int update_win(){
+	//TODO: do something usefull.
+	return 0;
 }
 
 void reset()
@@ -85,8 +81,9 @@ void send(bool syn, bool ack) {
 	target_address = remote;
 	retrans.syn := syn;
 	retrans.ack := ack;
-	retrans.seqNr := update_seq(syn);
-	retrans.ackNr := update_ack(ack);
+	retrans.seqNr := snd_nxt;
+	retrans.ackNr := seq_ack;
+	retrans.win := update_win();
 	to_network := retrans;
 }
 
