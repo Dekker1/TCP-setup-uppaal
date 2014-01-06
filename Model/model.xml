@@ -26,9 +26,9 @@ void initialize(TCP_segment&amp; p)
 	p.ack := false;
 }
 
-TCP_segment to_network;
-TCP_segment from_network;</declaration><template><name>Network</name><parameter>const int network</parameter><declaration>int target; // the target for the current network packet
-TCP_segment transfer;
+meta TCP_segment to_network;
+meta TCP_segment from_network;</declaration><template><name>Network</name><parameter>const int network</parameter><declaration>int target; // the target for the current network packet
+meta TCP_segment transfer;
 clock c;
 
 void set_target() {
@@ -46,10 +46,10 @@ void send_packet(){
 </declaration><location id="id0" x="-5312" y="-1536"><committed/></location><location id="id1" x="-5152" y="-1664"><name x="-5160" y="-1696">PacketLost</name><committed/></location><location id="id2" x="-5312" y="-1664"><name x="-5360" y="-1696">PacketInTransit</name></location><location id="id3" x="-5312" y="-1408"><name x="-5360" y="-1384">ReadyToReceive</name></location><init ref="id3"/><transition><source ref="id0"/><target ref="id2"/><label kind="assignment" x="-5296" y="-1560">initialize(from_network)</label><nail x="-5280" y="-1592"/></transition><transition><source ref="id0"/><target ref="id3"/><label kind="synchronisation" x="-5304" y="-1488">Packet[target]!</label></transition><transition><source ref="id2"/><target ref="id0"/><label kind="guard" x="-5384" y="-1624">c &lt;= TTL</label><label kind="assignment" x="-5416" y="-1608">send_packet()</label></transition><transition><source ref="id2"/><target ref="id1"/></transition><transition><source ref="id1"/><target ref="id3"/><nail x="-5152" y="-1408"/></transition><transition><source ref="id3"/><target ref="id2"/><label kind="synchronisation" x="-5432" y="-1560">Packet[network]?</label><label kind="assignment" x="-5432" y="-1544">set_target(),
 receive_packet(),
 c:=0</label><nail x="-5440" y="-1408"/><nail x="-5440" y="-1664"/></transition></template><template><name>Host_Handshake</name><parameter>const int local, const int remote, const int network</parameter><declaration>clock c;
-int last_seq = 0;
-int last_ack = 0;
-TCP_segment retrans;
-TCP_segment received;
+meta int last_seq = 0;
+meta int last_ack = 0;
+meta TCP_segment retrans;
+meta TCP_segment received;
 
 void receive_packet(){
 	received := from_network;
@@ -97,9 +97,8 @@ c := 0</label></transition><transition><source ref="id10"/><target ref="id6"/><l
 from_network.syn</label><label kind="synchronisation" x="-432" y="-728">Packet[local]?</label><label kind="assignment" x="-432" y="-680">receive_packet()</label></transition><transition><source ref="id9"/><target ref="id5"/><label kind="guard" x="-672" y="-816">from_network.syn&amp;&amp;
 ! from_network.ack</label><label kind="synchronisation" x="-672" y="-832">Packet[local]?</label><label kind="assignment" x="-672" y="-792">receive_packet()</label></transition><transition><source ref="id10"/><target ref="id9"/><label kind="synchronisation" x="-664" y="-976">Packet[network]!</label><label kind="assignment" x="-664" y="-960">send(true, false),
 c := 0</label><nail x="-480" y="-928"/><nail x="-480" y="-800"/></transition><transition><source ref="id8"/><target ref="id7"/><label kind="guard" x="-984" y="-656">from_network.ack &amp;&amp;
-! from_network.syn</label><label kind="synchronisation" x="-984" y="-672">Packet[local]?</label><label kind="assignment" x="-984" y="-624">receive_packet()</label><nail x="-992" y="-672"/></transition><transition><source ref="id9"/><target ref="id11"/><nail x="-416" y="-800"/><nail x="-416" y="-1152"/><nail x="-704" y="-1152"/></transition><transition><source ref="id11"/><target ref="id9"/><label kind="synchronisation" x="-592" y="-1120">Packet[network]!</label><label kind="assignment" x="-592" y="-1104">reset(),
-send(true,false),
-c := 0</label><nail x="-448" y="-1120"/></transition><transition><source ref="id10"/><target ref="id11"/><nail x="-704" y="-960"/><nail x="-704" y="-1088"/></transition><transition><source ref="id11"/><target ref="id10"/><label kind="assignment" x="-816" y="-1056">reset()</label><nail x="-768" y="-1088"/><nail x="-768" y="-960"/></transition></template><system>Network1 = Network(0);
+! from_network.syn</label><label kind="synchronisation" x="-984" y="-672">Packet[local]?</label><label kind="assignment" x="-984" y="-624">receive_packet()</label><nail x="-992" y="-672"/></transition><transition><source ref="id9"/><target ref="id11"/><nail x="-416" y="-800"/><nail x="-416" y="-1152"/><nail x="-704" y="-1152"/></transition><transition><source ref="id11"/><target ref="id9"/><label kind="synchronisation" x="-592" y="-1120">Packet[network]!</label><label kind="assignment" x="-592" y="-1104">send(true,false),
+c := 0</label><nail x="-448" y="-1120"/></transition><transition><source ref="id10"/><target ref="id11"/><nail x="-704" y="-960"/><nail x="-704" y="-1088"/></transition><transition><source ref="id11"/><target ref="id10"/><nail x="-768" y="-1088"/><nail x="-768" y="-960"/></transition></template><system>Network1 = Network(0);
 Network2 = Network(0);
 Network3 = Network(0);
 Network4 = Network(0);
