@@ -50,40 +50,43 @@ receive_packet(),
 c:=0</label><nail x="-5440" y="-1408"/><nail x="-5440" y="-1664"/></transition></template><template><name>Host_Handshake</name><parameter>const int local, const int remote, const int network</parameter><declaration>clock c;
 meta int snd_una = 0;
 meta int snd_nxt = 0;
-meta int seg_ack = 0;
-meta int seg_len = 0;
+meta int snd_ack = 0;
 meta int rcv_nxt = 0;
+const int seg_len = 0;
+const int window = 1;
 meta TCP_segment retrans;
 meta TCP_segment received;
 
 bool receive_packet(){
-	received := from_network;
-	snd_nxt = received.ackNr;
-	seg_ack = (received.seqNr + 1 + len)%MAX_SEQ;
-
-	initialize(from_network);
-}
-
-int update_win(){
-	//TODO: do something usefull.
-	return 0;
-}
-
-void reset()
-{
-	last_seq := 0;
-	last_ack := 0;
-	initialize(retrans);
-	initialize(received);
+	if (from_network.syn) {
+		rcv_nxt = from_network.seqNr;
+	}
+	if (rcv_nxt == from_network.seqNr) {
+		if (received.ack &amp;&amp; snd_una &lt; from_network.ackNr) {
+			snd_una = from_network.ackNr;
+		}
+		else if (received.ack) {
+			return false;
+		}
+		received := from_network;
+		snd_nxt = received.ackNr + 1;
+		snd_ack = (received.seqNr + 1 + seg_len)%MAX_SEQ;
+		initialize(from_network);
+		return true;
+	}
+	return false;
 }
 
 void send(bool syn, bool ack) {
+	if (syn) {
+		snd_una := snd_nxt;
+	}
 	target_address = remote;
 	retrans.syn := syn;
 	retrans.ack := ack;
 	retrans.seqNr := snd_nxt;
-	retrans.ackNr := seq_ack;
-	retrans.win := update_win();
+	retrans.ackNr := snd_ack;
+	retrans.win := window;
 	to_network := retrans;
 }
 
