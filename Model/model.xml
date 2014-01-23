@@ -48,7 +48,7 @@ void send_packet(){
 }
 </declaration><location id="id0" x="-5312" y="-1536"><committed/></location><location id="id1" x="-5152" y="-1664"><name x="-5160" y="-1696">PacketLost</name><committed/></location><location id="id2" x="-5312" y="-1664"><name x="-5360" y="-1696">PacketInTransit</name></location><location id="id3" x="-5312" y="-1408"><name x="-5360" y="-1384">ReadyToReceive</name></location><init ref="id3"/><transition><source ref="id0"/><target ref="id2"/><label kind="assignment" x="-5296" y="-1560">initialize(from_network)</label><nail x="-5280" y="-1592"/></transition><transition><source ref="id0"/><target ref="id3"/><label kind="synchronisation" x="-5304" y="-1488">Packet[target]!</label></transition><transition><source ref="id2"/><target ref="id0"/><label kind="guard" x="-5384" y="-1624">c &lt;= TTL</label><label kind="assignment" x="-5416" y="-1608">send_packet()</label></transition><transition><source ref="id2"/><target ref="id1"/><label kind="guard" x="-5296" y="-1664">packets_lost &gt; 0</label><label kind="assignment" x="-5288" y="-1648">packets_lost--</label></transition><transition><source ref="id1"/><target ref="id3"/><nail x="-5152" y="-1408"/></transition><transition><source ref="id3"/><target ref="id2"/><label kind="synchronisation" x="-5432" y="-1560">Packet[network]?</label><label kind="assignment" x="-5432" y="-1544">set_target(),
 receive_packet(),
-c:=0</label><nail x="-5440" y="-1408"/><nail x="-5440" y="-1664"/></transition></template><template><name>Host_Handshake</name><parameter>const int local, const int remote, const int network</parameter><declaration>clock c;
+c:=0</label><nail x="-5440" y="-1408"/><nail x="-5440" y="-1664"/></transition></template><template><name>Host</name><parameter>const int local, const int remote, const int network</parameter><declaration>clock c;
 SEQ snd_nxt = 0;
 SEQ snd_ack = 0;
 SEQ rcv_nxt = 0;
@@ -99,8 +99,8 @@ c := 0</label><nail x="-448" y="-1120"/></transition><transition><source ref="id
 Network2 = Network(0);
 Network3 = Network(0);
 Network4 = Network(0);
-Host1Handshake = Host_Handshake(1,2,0);
-Host2Handshake = Host_Handshake(2,1,0);
+Host1 = Host(1,2,0);
+Host2 = Host(2,1,0);
 
-system Network1, Network2, Network3, Host1Handshake,Host2Handshake;
+system Network1, Network2, Network3, Host1,Host2;
 </system></nta>

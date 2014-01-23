@@ -3,14 +3,19 @@
 /*
 
 */
+(not Host1.Closed and not Host2.Closed) --> Host1.Established
+
+/*
+
+*/
 A[] not deadlock
 
 /*
 
 */
-E<> (Host1Handshake.Established and Host2Handshake.Established)
+E<> (Host1.Established and Host2.Established)
 
 /*
 
 */
-A[] not (Host1Handshake.Closed and Host2Handshake.Established)
+A[] not (Host1.Closed and Host2.Established)
