@@ -18,9 +18,9 @@ typedef struct {
 	bool ack;
 	SEQ seqNr;
 	SEQ ackNr;
-} TCP_segment;
+} TCP_packet;
 
-void initialize(TCP_segment&amp; p)
+void initialize(TCP_packet&amp; p)
 {
 	p.seqNr := 0;
 	p.ackNr := 0;
@@ -28,9 +28,9 @@ void initialize(TCP_segment&amp; p)
 	p.ack := false;
 }
 
-meta TCP_segment to_network;
-meta TCP_segment from_network;</declaration><template><name>Network</name><parameter>const int network</parameter><declaration>int target; // the target for the current network packet
-meta TCP_segment transfer;
+meta TCP_packet to_network;
+meta TCP_packet from_network;</declaration><template><name>Network</name><parameter>const int network</parameter><declaration>int target; // the target for the current network packet
+meta TCP_packet transfer;
 clock c;
 int packets_lost := 0; // Max packets a network can lose.
 
@@ -52,8 +52,8 @@ SEQ snd_nxt = 0;
 SEQ snd_ack = 0;
 SEQ rcv_nxt = 0;
 const int seg_len = 0;
-TCP_segment retrans;
-TCP_segment received;
+TCP_packet retrans;
+TCP_packet received;
 
 bool receive_packet(){
 	if (from_network.syn) {

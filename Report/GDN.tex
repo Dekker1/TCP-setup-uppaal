@@ -73,12 +73,123 @@
 
 \lettrine[nindent=0em,lines=3]{I} ntroduction Introduction Introduction Introduction Introduction Introduction Introduction Introduction Introduction Introduction Introduction Introduction Introduction Introduction Introduction Introduction Introduction .
 
-\section*{Modeling the TCP handshake}
-We will now discuss how we modeled the TCP handshake of rfc793 as an Uppaal model.
+\section{Modelling the TCP handshake}
+We will now discuss how we modelled the TCP handshake, defined in Rfc793 "Transmission Control Protocol", as an Uppaal model. We will start by giving a short overview this TCP handshake. For more information please check Rfc793.
 
-\section*{Model checking and verification}
+\subsection{Overview of the TCP handshake}
+A TCP connection consists of a initially bi-directional connection between two hosts. Every combination between two host addresses and a port at each host is an unique TCP connection. The TCP handshake is needed to set up a mutually acknowledged connection between these hosts.
+There are two common cases for how the TCP connection set-up works.
+\begin{enumerate}
+\item The client-server model. In this model, there is a server that is ready to listen on a certain port. 
+\begin{itemize}
+\item The client sends a TCP packet to this server containing this target port, a sequence number x and the SYN and ACK flags are set to true and false respectively.
+\item Then the server receives this packet, and responds with a packet where both SYN and ACK are set to true. The sequence number is y, and the ack number is x+1.
+\item Next, the client receives the packet from the server, checks whether the ack-number matches the previous sequence number +1, and then sends an TCP packet with SYN set to false, ACK set to true, a sequence number of x+1 and ack number of y+1. The client is now in the "Established" state.
+\item Finally, the server receives this packet and checks whether the ack-number matches the previous sequence number +1. The server is now in the "Established" state.
+\end{itemize}  
+\item The simultaneous connection set-up model. In this model, there are two hosts that want to simultaneously connect to each other.
+\begin{itemize}
+\item Both hosts send a TCP packet to each other containing the target port, a sequence number and the SYN and ACK flags are set to true and false. 
+\item Next, both hosts receive the syn packet and then send a packet where SYN is set to false, and ACK is set to true. The ack number equals the received sequence number +1.
+\item Both hosts receive the packet and check if the ack number is the previous sequence number +1. Both hosts are now in the established state.
+\end{itemize}
+\end{enumerate}
+Rfc793 also describes the procedure for sending information in the established state, and terminating the connection. But because of the scope of this assignment, we will only focus on the connection set-up.
 
-\section*{Conclusions}
+\subsection{The TCP packets}
+Hosts communicate by means of TCP packets. Since we only model the connection set-up, we can simplify the packets we use, and only include the relevant data. For the complete specification of TCP packets and it's headers, check Rfc 793.
+
+Our packets are modelled as follows:
+\begin{verbatim}
+typedef struct {
+    bool syn;
+    bool ack;
+    SEQ seqNr;
+    SEQ ackNr;
+} TCP_packet;
+\end{verbatim}
+Where syn and ack are the SYN and ACK flags, and seqNr is the sequence number of the sending party, and ackNr is the acknowledgement for the previous packet of the receiving party.
+
+\subsection{Modelling the network}
+Hosts do need a network in order to communicate with each other. We assume that there is a almost perfectly reliable connection between both hosts. Just as in a real network, packets can be lost at any point, either because a part of the connection malfunctioned, or the packet exceeded the time in it's time to live field. Both cases are modelled in our network.
+
+When a host sends a packet into the network, first a global variable for both the packet, and the target are set. Then both are copied into the instance of that particular network. Then, a packet can either be delivered to the target and the network is reset, or the packet can be lost, and the network is reset. For the synchronization we use a number of channels defined as:
+\begin{verbatim}chan Packet[HOSTS+1]
+\end{verbatim}
+With this definition, when sending a packet to a host, the hosts $1\ldots x$ are addressed with number $1\ldots x$. Also, sending a packet to the network will always use number 0, resulting in any available network automaton picking up this packet.
+
+\includegraphics[scale=0.85]{network_model}
+
+\subsubsection{Abstraction from real networks}
+\begin{itemize}
+\item Our networks have a maximum amount of packets that can be dropped in total for each network automata. This was needed in order to reduce state space to be able to check the model. Also, cases where all packets are dropped are not interesting for us, because that is a case where no connection can be established, and is therefore trivial.
+\item Real life networks can handle a large amount of packets in transit simultaneously. But since every instance of the network automata can only handle a single packet at a time, we need one instance for each simultaneous network. With 4 networks hosts can have 1 or more outstanding packets, and is therefore enough to model all cases that are interesting for us.
+\end{itemize}
+
+
+\subsection{Modelling the hosts}
+Every host in our model has it's own instance of a host automaton. At the initialization, a local address for the host is set, and an address for the target host, that we want to communicate to. Also, the first step a host needs to make is to assign an initial sequence number it will use.
+By using the following transition select statement:
+\begin{verbatim}i:SEQ
+\end{verbatim}
+Where SEQ is defined as 
+\begin{verbatim}const int MAX_SEQ = 3;
+typedef int[0,MAX_SEQ] SEQ;
+\end{verbatim}
+We ensure that every possible initial sequence number can be used for checking the model.
+
+Visually, our model is layed out like the diagram on page 23 of Rfc793. This helps to see how our model maps to the real specification. (See figure 1 for our model)
+\begin{figure*}
+  \includegraphics[width=\textwidth]{host_model}
+  \caption{The model of a host}
+\end{figure*}
+We model every state connected to the TCP handshake, namely Closed, Listen, SynSent, RynRcvd and Established. Since we can not synchronize two channels at once, we added committed states between Listen-SynRcvd, SynSent-Established, and SynSent-RynRcvd. This way we can model the behaviour of receiving, and then sending a packet as a single action.
+
+Hosts also support a re-send timer if an acknowledgement is not received faster then the round-trip time. This upper bound is not specified in Rfc793, but they suggest that one second is a reasonable value for this. Therefore our UBOUND is set to 600, corresponding to 60,0 seconds. This re-send timer is reset every time a packet is send to the network.
+
+Our hosts are modelled to update all necessary values for sending the next packet when a packet is received. This is defined in our receive packet function:
+\begin{verbatim}
+bool receive_packet(){
+	if (from_network.syn) {
+		rcv_nxt = from_network.seqNr;
+	}
+	if (rcv_nxt == from_network.seqNr) {
+		received := from_network;
+		if(received.ack){
+			snd_nxt = received.ackNr;
+		}
+		snd_ack = (received.seqNr + 1 + seg_len)%MAX_SEQ;
+		rcv_nxt = snd_ack;
+		initialize(from_network);
+		return true;
+	}
+	return false;
+}
+\end{verbatim}
+
+This function handles the receiving of a packet, and returns whether this packet should be accepted, or not.
+
+If the syn flag of the incoming packet is set, it is always accepted. If this is not the case, then the sequence number of the packet is checked against the expected next sequence number.
+
+When a packet is accepted, then the ack that this host will send is set to the received sequence number + 1, modulo the max number of sequence numbers.
+
+
+\subsubsection{Abstraction from real hosts}
+\begin{itemize}
+\item The space of sequence numbers is much larger in real hosts, and sequence number wrapping can only occur on very fast networks. But because we do not model real data transmission in the established state, and only focus on the connection set-up, a few sequence numbers are enough to model all interesting cases. Therefore we set our max sequence number to 3.
+\item We do not model the behaviour of connection-reset packets that can be send when a host refuses a connection.
+\item For real TCP connections, there are many more checks to be done for checking whether a packet will be accepted or not. Also, the expected next sequence number will not always be the last sequence number +1. But since we only model the connection set-up behaviour, our simplifications will suffice. Since this behaviour matches that particular part of Rfc793.
+\item Our model will indefinitely try to re-send a packet if it is not received. This does not match real-world behaviour, but since we modelled our networks to only drop a maximum number of packets, this will not matter.
+\end{itemize}
+
+
+
+
+
+
+\section{Model checking and verification}
+
+\section{Conclusions}
 
 
 
