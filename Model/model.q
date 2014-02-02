@@ -8,11 +8,6 @@
 /*
 
 */
-(not Host1.Closed and not Host2.Closed) --> Host1.Established
-
-/*
-
-*/
 A[] not deadlock
 
 /*
