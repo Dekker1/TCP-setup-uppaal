@@ -18,9 +18,9 @@ typedef struct {
 	bool ack;
 	SEQ seqNr;
 	SEQ ackNr;
-} TCP_segment;
+} TCP_packet;
 
-void initialize(TCP_segment&amp; p)
+void initialize(TCP_packet&amp; p)
 {
 	p.seqNr := 0;
 	p.ackNr := 0;
@@ -28,9 +28,9 @@ void initialize(TCP_segment&amp; p)
 	p.ack := false;
 }
 
-meta TCP_segment to_network;
-meta TCP_segment from_network;</declaration><template><name>Network</name><parameter>const int network</parameter><declaration>int target; // the target for the current network packet
-meta TCP_segment transfer;
+meta TCP_packet to_network;
+meta TCP_packet from_network;</declaration><template><name>Network</name><parameter>const int network</parameter><declaration>int target; // the target for the current network packet
+meta TCP_packet transfer;
 clock c;
 int packets_lost := 0; // Max packets a network can lose.
 
@@ -46,15 +46,15 @@ void receive_packet(){
 void send_packet(){
 	from_network := transfer;
 }
-</declaration><location id="id0" x="-5312" y="-1536"><committed/></location><location id="id1" x="-5152" y="-1664"><name x="-5160" y="-1696">PacketLost</name><committed/></location><location id="id2" x="-5312" y="-1664"><name x="-5360" y="-1696">PacketInTransit</name></location><location id="id3" x="-5312" y="-1408"><name x="-5360" y="-1384">ReadyToReceive</name></location><init ref="id3"/><transition><source ref="id0"/><target ref="id2"/><label kind="assignment" x="-5296" y="-1560">initialize(from_network)</label><nail x="-5280" y="-1592"/></transition><transition><source ref="id0"/><target ref="id3"/><label kind="synchronisation" x="-5304" y="-1488">Packet[target]!</label></transition><transition><source ref="id2"/><target ref="id0"/><label kind="guard" x="-5384" y="-1624">c &lt;= TTL</label><label kind="assignment" x="-5416" y="-1608">send_packet()</label></transition><transition><source ref="id2"/><target ref="id1"/><label kind="guard" x="-5296" y="-1664">packets_lost &gt; 0</label><label kind="assignment" x="-5288" y="-1648">packets_lost--</label></transition><transition><source ref="id1"/><target ref="id3"/><nail x="-5152" y="-1408"/></transition><transition><source ref="id3"/><target ref="id2"/><label kind="synchronisation" x="-5432" y="-1560">Packet[network]?</label><label kind="assignment" x="-5432" y="-1544">set_target(),
+</declaration><location id="id0" x="-5312" y="-1536"><committed/></location><location id="id1" x="-5152" y="-1664"><name x="-5208" y="-1696">PacketLost</name><committed/></location><location id="id2" x="-5312" y="-1664"><name x="-5360" y="-1696">PacketInTransit</name></location><location id="id3" x="-5312" y="-1408"><name x="-5360" y="-1384">ReadyToReceive</name></location><init ref="id3"/><transition><source ref="id0"/><target ref="id2"/><label kind="assignment" x="-5296" y="-1560">initialize(from_network)</label><nail x="-5280" y="-1592"/></transition><transition><source ref="id0"/><target ref="id3"/><label kind="synchronisation" x="-5304" y="-1488">Packet[target]!</label></transition><transition><source ref="id2"/><target ref="id0"/><label kind="guard" x="-5384" y="-1624">c &lt;= TTL</label><label kind="assignment" x="-5416" y="-1608">send_packet()</label></transition><transition><source ref="id2"/><target ref="id1"/><label kind="guard" x="-5296" y="-1664">packets_lost &gt; 0</label><label kind="assignment" x="-5288" y="-1648">packets_lost--</label></transition><transition><source ref="id1"/><target ref="id3"/><nail x="-5152" y="-1408"/></transition><transition><source ref="id3"/><target ref="id2"/><label kind="synchronisation" x="-5432" y="-1560">Packet[network]?</label><label kind="assignment" x="-5432" y="-1544">set_target(),
 receive_packet(),
 c:=0</label><nail x="-5440" y="-1408"/><nail x="-5440" y="-1664"/></transition></template><template><name>Host</name><parameter>const int local, const int remote, const int network</parameter><declaration>clock c;
 SEQ snd_nxt = 0;
 SEQ snd_ack = 0;
 SEQ rcv_nxt = 0;
 const int seg_len = 0;
-TCP_segment retrans;
-TCP_segment received;
+TCP_packet retrans;
+TCP_packet received;
 
 bool receive_packet(){
 	if (from_network.syn) {
