@@ -3,6 +3,11 @@
 /*
 
 */
+(not Host1.Init and not Host1.Closed) --> (Host1.Established && Host2.Established)
+
+/*
+
+*/
 (not Host1.Closed and not Host2.Closed) --> Host1.Established
 
 /*
