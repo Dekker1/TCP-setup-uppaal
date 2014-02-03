@@ -28,7 +28,7 @@
 	\pagestyle{fancy}
 	\fancyhead{}
 	\fancyfoot{}
-	\fancyhead[C]{Jip Dekker and Ben Br\"ucker $\bullet$ GDN Final Assignment}
+	\fancyhead[C]{Jip J. Dekker and Ben Br\"ucker $\bullet$ GDN Final Assignment}
 %including sourcecode in text
 \usepackage{verbatim}
 
@@ -43,7 +43,7 @@
 	}	
 \author{%
 	\large
-	\textsc{Jip Dekker} \\[2mm]
+	\textsc{Jip J. Dekker} \\[2mm]
 	\normalsize	Radboud University Nijmegen \\
 	\normalsize	4122100
 	\vspace{-5mm}
@@ -73,8 +73,8 @@
 
 \lettrine[nindent=0em,lines=3]{I} ntroduction Introduction Introduction Introduction Introduction Introduction Introduction Introduction Introduction Introduction Introduction Introduction Introduction Introduction Introduction Introduction Introduction .
 
-\section{Modelling the TCP handshake}
-We will now discuss how we modelled the TCP handshake, defined in Rfc793 "Transmission Control Protocol", as an Uppaal model. We will start by giving a short overview this TCP handshake. For more information please check Rfc793.
+\section{Modeling the TCP handshake}
+We will now discuss how we modeled the TCP handshake, defined in Rfc793 ``Transmission Control Protocol'', as an Uppaal model. We will start by giving a short overview this TCP handshake. For more information please check Rfc793.
 
 \subsection{Overview of the TCP handshake}
 A TCP connection consists of a initially bi-directional connection between two hosts. Every combination between two host addresses and a port at each host is an unique TCP connection. The TCP handshake is needed to set up a mutually acknowledged connection between these hosts.
@@ -84,8 +84,8 @@ There are two common cases for how the TCP connection set-up works.
 \begin{itemize}
 \item The client sends a TCP packet to this server containing this target port, a sequence number x and the SYN and ACK flags are set to true and false respectively.
 \item Then the server receives this packet, and responds with a packet where both SYN and ACK are set to true. The sequence number is y, and the ack number is x+1.
-\item Next, the client receives the packet from the server, checks whether the ack-number matches the previous sequence number +1, and then sends an TCP packet with SYN set to false, ACK set to true, a sequence number of x+1 and ack number of y+1. The client is now in the "Established" state.
-\item Finally, the server receives this packet and checks whether the ack-number matches the previous sequence number +1. The server is now in the "Established" state.
+\item Next, the client receives the packet from the server, checks whether the ack-number matches the previous sequence number +1, and then sends an TCP packet with SYN set to false, ACK set to true, a sequence number of x+1 and ack number of y+1. The client is now in the ``Established'' state.
+\item Finally, the server receives this packet and checks whether the ack-number matches the previous sequence number +1. The server is now in the ``Established'' state.
 \end{itemize}  
 \item The simultaneous connection set-up model. In this model, there are two hosts that want to simultaneously connect to each other.
 \begin{itemize}
@@ -99,7 +99,7 @@ Rfc793 also describes the procedure for sending information in the established s
 \subsection{The TCP packets}
 Hosts communicate by means of TCP packets. Since we only model the connection set-up, we can simplify the packets we use, and only include the relevant data. For the complete specification of TCP packets and it's headers, check Rfc 793.
 
-Our packets are modelled as follows:
+Our packets are modeled as follows:
 \begin{verbatim}
 typedef struct {
     bool syn;
@@ -110,7 +110,7 @@ typedef struct {
 \end{verbatim}
 Where syn and ack are the SYN and ACK flags, and seqNr is the sequence number of the sending party, and ackNr is the acknowledgement for the previous packet of the receiving party.
 
-\subsection{Modelling the network}
+\subsection{Modeling the network}
 Hosts do need a network in order to communicate with each other. We assume that there is a almost perfectly reliable connection between both hosts. Just as in a real network, packets can be lost at any point, either because a part of the connection malfunctioned, or the packet exceeded the time in it's time to live field. Both cases are modelled in our network.
 
 When a host sends a packet into the network, first a global variable for both the packet, and the target are set. Then both are copied into the instance of that particular network. Then, a packet can either be delivered to the target and the network is reset, or the packet can be lost, and the network is reset. For the synchronization we use a number of channels defined as:
@@ -118,7 +118,14 @@ When a host sends a packet into the network, first a global variable for both th
 \end{verbatim}
 With this definition, when sending a packet to a host, the hosts $1\ldots x$ are addressed with number $1\ldots x$. Also, sending a packet to the network will always use number 0, resulting in any available network automaton picking up this packet.
 
-\includegraphics[scale=0.85]{network_model}
+\begin{figure}[h!]
+	\begin{center}
+		\includegraphics[width=\linewidth]{network_model}
+	\end{center}
+	\caption{The model of a network}
+	\label{fig:figure1}
+\end{figure}
+
 
 \subsubsection{Abstraction from real networks}
 \begin{itemize}
@@ -138,16 +145,16 @@ typedef int[0,MAX_SEQ] SEQ;
 \end{verbatim}
 We ensure that every possible initial sequence number can be used for checking the model.
 
-Visually, our model is layed out like the diagram on page 23 of Rfc793. This helps to see how our model maps to the real specification. (See figure 1 for our model)
+Visually, our model has the same layout as the diagram on page 23 of Rfc793. This helps to see how our model maps to the real specification. (See figure 1 for our model)
 \begin{figure*}
   \includegraphics[width=\textwidth]{host_model}
   \caption{The model of a host}
 \end{figure*}
-We model every state connected to the TCP handshake, namely Closed, Listen, SynSent, RynRcvd and Established. Since we can not synchronize two channels at once, we added committed states between Listen-SynRcvd, SynSent-Established, and SynSent-RynRcvd. This way we can model the behaviour of receiving, and then sending a packet as a single action.
+We model every state connected to the TCP handshake, namely Closed, Listen, SynSent, RynRcvd and Established. Since we can not synchronize two channels at once, we added committed states between Listen-SynRcvd, SynSent-Established, and SynSent-RynRcvd. This way we can model the behavior of receiving, and then sending a packet as a single action.
 
-Hosts also support a re-send timer if an acknowledgement is not received faster then the round-trip time. This upper bound is not specified in Rfc793, but they suggest that one second is a reasonable value for this. Therefore our UBOUND is set to 600, corresponding to 60,0 seconds. This re-send timer is reset every time a packet is send to the network.
+Hosts also support a re-send timer if an acknowledgment is not received faster then the round-trip time. This upper bound is not specified in Rfc793, but they suggest that one second is a reasonable value for this. Therefore our UBOUND is set to 600, corresponding to 60,0 seconds. This re-send timer is reset every time a packet is send to the network.
 
-Our hosts are modelled to update all necessary values for sending the next packet when a packet is received. This is defined in our receive packet function:
+Our hosts are modeled to update all necessary values for sending the next packet when a packet is received. This is defined in our receive packet function:
 \begin{verbatim}
 bool receive_packet(){
 	if (from_network.syn) {
@@ -177,9 +184,9 @@ When a packet is accepted, then the ack that this host will send is set to the r
 \subsubsection{Abstraction from real hosts}
 \begin{itemize}
 \item The space of sequence numbers is much larger in real hosts, and sequence number wrapping can only occur on very fast networks. But because we do not model real data transmission in the established state, and only focus on the connection set-up, a few sequence numbers are enough to model all interesting cases. Therefore we set our max sequence number to 3.
-\item We do not model the behaviour of connection-reset packets that can be send when a host refuses a connection.
-\item For real TCP connections, there are many more checks to be done for checking whether a packet will be accepted or not. Also, the expected next sequence number will not always be the last sequence number +1. But since we only model the connection set-up behaviour, our simplifications will suffice. Since this behaviour matches that particular part of Rfc793.
-\item Our model will indefinitely try to re-send a packet if it is not received. This does not match real-world behaviour, but since we modelled our networks to only drop a maximum number of packets, this will not matter.
+\item We do not model the behavior of connection-reset packets that can be send when a host refuses a connection.
+\item For real TCP connections, there are many more checks to be done for checking whether a packet will be accepted or not. Also, the expected next sequence number will not always be the last sequence number +1. But since we only model the connection set-up behavior, our simplifications will suffice. Since this behavior matches that particular part of Rfc793.
+\item Our model will indefinitely try to re-send a packet if it is not received. This does not match real-world behavior, but since we modeled our networks to only drop a maximum number of packets, this will not matter.
 \end{itemize}
 
 
@@ -187,7 +194,43 @@ When a packet is accepted, then the ack that this host will send is set to the r
 
 
 
-\section{Model checking and verification}
+\section{Model checking and verification} % (fold)
+\label{sec:model_checking_and_verification}
+	Because we used Uppaal as our modeling tool, it provides us with an powerful query language to use for verifying our model against the specifications given in Rfc793. Most of these specifications have been discussed in the modeling itself as it would take too long to verify every detail of the model and every model will differ in some way as every model is prone to the creativity of it's designer. We can however guarantee some basic functionalities using the query language. Given that the model is correct, we can test various aspects of the model to check if their are loopholes within the protocol that haven't been uncovered. If there aren't any loopholes, then we can assume that the protocol, given the abstractions as described earlier, is proven correct as all possible states have been explored.
+	\subsection{Model Verification} % (fold)
+	\label{sub:model_verification}
+		As discussed before we can verify that the model has the basic functionality as described in the request for change. The first thing that should be guaranteed is that two hosts can connect to each other. This is simply verified by the following query stating that there is such a state that both Host1 and Host2 are in the Established state:
+		\begin{verbatim}
+			E<> Host1.Established and Host2.Established
+		\end{verbatim}
+		This is verified this way as an host only enter the Established state once it's connected.
+
+		Furthermore one host shouldn't be in the established state, thinking their is an connection, while the the other host is still in the Listen, Closed or SynSent state, knowing nothing about an connection whatsoever. This can be verified using the following query:
+		\begin{verbatim}
+			A[] not ((Host1.Closed or Host1.Listen or Host1.SynSent) and Host2.Established)
+		\end{verbatim}
+		This query states that there isn't a state were Host1 is in the Closed or Listen state while Host2 is in the Established state. Note that the one of the host can be in the SynRcvd state while the other has an established connection. This would mean the first host is waiting for the last packet sent by the second host.
+
+		Lastly we want to guarantee that the protocol doesn't have places were the hosts get stuck and don't know what to do. This phenomenon is an deadlock in this model, where there aren't any options advance in an specific state of the model. To test this we need to make sure that our established state transitions back to itself, so it doesn't result in an deadlock. Then we can check for deadlocks using the simple query:
+		\begin{verbatim}
+			A[] not deadlock
+		\end{verbatim}
+
+		Our model passes these queries as is shown in figure \ref{fig:verifier}, proving that an implementation following this model has basic functionality.
+		\begin{figure}[h!]
+			\begin{center}
+				\includegraphics[width=\linewidth]{verifier.png}
+			\end{center}
+			\caption{Uppaal verifier - basic queries}
+			\label{fig:verifier}
+		\end{figure}
+	% subsection model_verification (end)
+	\subsection{Guaranteeing an connection} % (fold)
+	\label{sub:guaranteeing_an_connection}
+	
+	% subsection guaranteeing_an_connection (end)
+% section model_checking_and_verification (end)
+
 
 \section{Conclusions}
 
