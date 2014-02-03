@@ -18,4 +18,4 @@ E<> (Host1.Established and Host2.Established)
 /*
 
 */
-A[] not (Host1.Closed and Host2.Established)
+A[] not ((Host1.Closed or Host1.Listen or Host1.SynSent) and Host2.Established)
