@@ -45,13 +45,13 @@
 	\large
 	\textsc{Jip J. Dekker} \\[2mm]
 	\normalsize	Radboud University Nijmegen \\
-	\normalsize	4122100
+	\normalsize	s4122100
 	\vspace{-5mm}
 	\and 
 	\large
 	\textsc{Ben Br\"ucker} \\[2mm]
 	\normalsize	Radboud University Nijmegen \\
-	\normalsize	0413291
+	\normalsize	s0413291
 	\vspace{-5mm}
 	}
 \date{}
@@ -64,14 +64,12 @@
 
 \twocolumn[\begin{@twocolumnfalse}
   \maketitle
-  \begin{abstract}
-  \noindent Abstract Abstract Abstract Abstract Abstract Abstract Abstract Abstract Abstract Abstract Abstract Abstract Abstract Abstract Abstract Abstract Abstract Abstract Abstract Abstract Abstract Abstract Abstract Abstract Abstract Abstract Abstract Abstract 
-\end{abstract}
+  	\begin{abstract}
+  		\noindent In this report we will discuss our model in Uppaal of the 3-way handshake as used in the TCP protocol. We will give an overview of the handshake itself and provide meaningful observation about specific aspects of this protocol. Furthermore we will discuss the specifics of our model and comment on some of the decisions we made designing the model. In conclusion we will submit our model to verification and model checking using the Uppaal query language, proving basic basic functionality and guaranteeing connection setup.
+	\end{abstract}
 \end{@twocolumnfalse}]
 
 \thispagestyle{fancy}
-
-\lettrine[nindent=0em,lines=3]{I} ntroduction Introduction Introduction Introduction Introduction Introduction Introduction Introduction Introduction Introduction Introduction Introduction Introduction Introduction Introduction Introduction Introduction .
 
 \section{Modeling the TCP handshake}
 We will now discuss how we modeled the TCP handshake, defined in Rfc793 ``Transmission Control Protocol'', as an Uppaal model. We will start by giving a short overview this TCP handshake. For more information please check Rfc793.
