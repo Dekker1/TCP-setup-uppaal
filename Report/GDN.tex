@@ -185,7 +185,7 @@ When a packet is accepted, then the ack that this host will send is set to the r
 \subsubsection{Abstraction from real hosts}
 \begin{itemize}
 \item The space of sequence numbers is much larger in real hosts, and sequence number wrapping can only occur on very fast networks. But because we do not model real data transmission in the established state, and only focus on the connection set-up, a few sequence numbers are enough to model all interesting cases. Therefore we set our max sequence number to 3.
-\item We do not model the behaviour of connection-reset packets that can be send when a host refuses a connection. These reset packets should be used instead of just discarding faulty packets.
+\item We do not model the behavior of connection-reset packets that can be send when a host refuses a connection. These reset packets should be used instead of just discarding faulty packets.
 \item For real TCP connections, there are many more checks to be done for checking whether a packet will be accepted or not. Also, the expected next sequence number will not always be the last sequence number +1. But since we only model the connection set-up behavior, our simplifications will suffice. Since this behavior matches that particular part of Rfc793.
 \item Our model will indefinitely try to re-send a packet if it is not received. This does not match real-world behavior, but since we modeled our networks to only drop a maximum number of packets, this will not matter.
 \end{itemize}
@@ -230,7 +230,7 @@ or Host1.SynSent) and Host2.Established)
 	% subsection model_verification (end)
 	\subsection{Guaranteeing an connection} % (fold)
 	\label{sub:guaranteeing_an_connection}
-		The queries become more interesting when trying to analyse a specific aspect of the model. The aspect we are interested in, is a guaranteed connection set-up. This means that when both hosts are able to set-up a connection and both hosts want a connection, the connection will always set-up. Hosts are only able to set-up a connection when they are not in the Init or Closed state. To force the hosts to enter the other states we remove the transition from the Closed state back to itself and guarantee the host leaves the Closed state by making it an committed state. To make sure a hosts does not deny the connection set-up we remove the possibility for hosts to return to the closed state. With these changes to the model we can now write a query that checks if the model does guarantee a connection between the two hosts given that they both try or accept connection set-up.
+		The queries become more interesting when trying to analyze a specific aspect of the model. The aspect we are interested in, is a guaranteed connection set-up. This means that when both hosts are able to set-up a connection and both hosts want a connection, the connection will always set-up. Hosts are only able to set-up a connection when they are not in the Init or Closed state. To force the hosts to enter the other states we remove the transition from the Closed state back to itself and guarantee the host leaves the Closed state by making it an committed state. To make sure a hosts does not deny the connection set-up we remove the possibility for hosts to return to the closed state. With these changes to the model we can now write a query that checks if the model does guarantee a connection between the two hosts given that they both try or accept connection set-up.
 
 		\subsubsection{Case 1: Basic three-way handshake}
 		First we prove that if the connection is not set-up using an simultaneous initiation, that there will always follow an connection between the two hosts. To check if this condition holds within our model we need to disable the possibility for the simultaneous initiation. We do this by removing the transition from the Listen state to the SynSent state and forcing within the query that one host visits the SynSent state, while the other visits the Listen state. To check if these conditions result in an established connection we use the following query:
@@ -265,7 +265,7 @@ or Host1.SynSent) and Host2.Established)
 		
 		% subsubsection Case 2: Simultaneous connection request (end)
 		\subsubsection{Issues concerning the checking of this model}
-		At the moment it is not possible to check both queries in the same model without removing some connections. This is due to the fact that we do not model the behaviour of reset-packets. Because connection cannot be actively reset, there exists an infinite loop when the following occurs:
+		At the moment it is not possible to check both queries in the same model without removing some connections. This is due to the fact that we do not model the behavior of reset-packets. Because connection cannot be actively reset, there exists an infinite loop when the following occurs:
 		\begin{enumerate}
 			\item Host1 sends a Syn packet, and is now in the SynSent state
 			\item Host2 was in the Closed state, so the packet gets discarded
