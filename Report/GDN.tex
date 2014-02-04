@@ -248,7 +248,7 @@ or Host1.SynSent) and Host2.Established)
 		% subsubsection Case 1: Basic three-way handshake (end)
 		
 		\subsubsection{Case 2: Simultaneous connection request}
-		Now we prove that when a simultaneous connection request happens, there will always be a established connection between both hosts. To check for this condition, we remove the transition between Closed and Listen. This way, both hosts have to establish a connection using a simultaneous connection set-up. Within the query we force that both hosts pass the SynSent state.
+		Now we prove that when a simultaneous connection request happens, there will always be a established connection between both hosts. To check for this condition, we remove the transition between Closed-Listen, Listen-Closed and SynSent-Closed. This way, both hosts have to establish a connection using a simultaneous connection set-up. Within the query we force that both hosts pass the SynSent state. Also we had to remove the packet discarding in the closed state. This is due to the fact that we do not handle reset packets. Please see the next section for a related problem.
 		\begin{verbatim}
 			(Host1.SynSent and Host2.SynSent) -->
 			(Host1.Established and Host2.Established)
@@ -273,6 +273,7 @@ or Host1.SynSent) and Host2.Established)
 			\item Host2 is now waiting for a Syn, or a SynAck packet and keeps re-sending Syn packets.
 			\item Host1 is now waiting for a Ack packet, and keeps re-sending Ack packets.
 		\end{enumerate}
+		They may exist cases where this edge case exists because of interesting timings, even with Reset packages. But this is outside the scope of this project
 		% subsubsection Issues concerning the checking of this model (end)
 	% subsection guaranteeing_an_connection (end)
 % section model_checking_and_verification (end)
