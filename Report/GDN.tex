@@ -27,7 +27,7 @@
 \usepackage{fancyhdr}
 	\pagestyle{fancy}
 	\fancyhead{}
-	\fancyfoot{}
+	\fancyfoot[C]{\thepage}
 	\fancyhead[C]{Jip J. Dekker and Ben Br\"ucker $\bullet$ GDN Final Assignment}
 %including sourcecode in text
 \usepackage{verbatim}
@@ -65,7 +65,7 @@
 \twocolumn[\begin{@twocolumnfalse}
   \maketitle
   	\begin{abstract}
-  		\noindent In this report we will discuss our model in Uppaal of the 3-way handshake as used in the TCP protocol. We will give an overview of the handshake itself and provide meaningful observation about specific aspects of this protocol. Furthermore we will discuss the specifics of our model and comment on some of the decisions we made designing the model. In conclusion we will submit our model to verification and model checking using the Uppaal query language, proving basic basic functionality and guaranteeing connection setup.
+  		\noindent In this report we will discuss our model in Uppaal of the 3-way handshake as used in the TCP protocol. We will give an overview of the handshake itself and provide meaningful observation about specific aspects of this protocol. Furthermore we will discuss the specifics of our model and comment on some of the decisions we made designing the model. In conclusion we will submit our model to verification and model checking using the Uppaal query language, proving basic basic functionality and guaranteeing connection set-up.
 	\end{abstract}
 \end{@twocolumnfalse}]
 
@@ -145,12 +145,14 @@ We ensure that every possible initial sequence number can be used for checking t
 
 Visually, our model has the same layout as the diagram on page 23 of Rfc793. This helps to see how our model maps to the real specification. (See figure 1 for our model)
 \begin{figure*}
-  \includegraphics[width=\textwidth]{host_model}
+  \includegraphics[scale=0.55]{host_model} % at textwidth, the figure takes an entire page
   \caption{The model of a host}
 \end{figure*}
 We model every state connected to the TCP handshake, namely Closed, Listen, SynSent, RynRcvd and Established. Since we can not synchronize two channels at once, we added committed states between Listen-SynRcvd, SynSent-Established, and SynSent-RynRcvd. This way we can model the behavior of receiving, and then sending a packet as a single action.
 
 Hosts also support a re-send timer if an acknowledgment is not received faster then the round-trip time. This upper bound is not specified in Rfc793, but they suggest that one second is a reasonable value for this. Therefore our UBOUND is set to 600, corresponding to 60,0 seconds. This re-send timer is reset every time a packet is send to the network.
+
+The hosts also check for faulty packets, and discard them. These are the loops at Listen, SynRcvd and SynSent. 
 
 Our hosts are modeled to update all necessary values for sending the next packet when a packet is received. This is defined in our receive packet function:
 \begin{verbatim}
@@ -182,7 +184,7 @@ When a packet is accepted, then the ack that this host will send is set to the r
 \subsubsection{Abstraction from real hosts}
 \begin{itemize}
 \item The space of sequence numbers is much larger in real hosts, and sequence number wrapping can only occur on very fast networks. But because we do not model real data transmission in the established state, and only focus on the connection set-up, a few sequence numbers are enough to model all interesting cases. Therefore we set our max sequence number to 3.
-\item We do not model the behavior of connection-reset packets that can be send when a host refuses a connection.
+\item We do not model the behaviour of connection-reset packets that can be send when a host refuses a connection. These reset packets should be used instead of just discarding faulty packets.
 \item For real TCP connections, there are many more checks to be done for checking whether a packet will be accepted or not. Also, the expected next sequence number will not always be the last sequence number +1. But since we only model the connection set-up behavior, our simplifications will suffice. Since this behavior matches that particular part of Rfc793.
 \item Our model will indefinitely try to re-send a packet if it is not received. This does not match real-world behavior, but since we modeled our networks to only drop a maximum number of packets, this will not matter.
 \end{itemize}
@@ -199,7 +201,8 @@ When a packet is accepted, then the ack that this host will send is set to the r
 	\label{sub:model_verification}
 		As discussed before we can verify that the model has the basic functionality as described in the request for change. The first thing that should be guaranteed is that two hosts can connect to each other. This is simply verified by the following query stating that there is such a state that both Host1 and Host2 are in the Established state:
 		\begin{verbatim}
-			E<> Host1.Established and Host2.Established
+			E<> Host1.Established 
+			and Host2.Established
 		\end{verbatim}
 		This is verified this way as an host only enter the Established state once it's connected.
 
@@ -226,14 +229,15 @@ or Host1.SynSent) and Host2.Established)
 	% subsection model_verification (end)
 	\subsection{Guaranteeing an connection} % (fold)
 	\label{sub:guaranteeing_an_connection}
-		The queries become more interesting while trying to analyse an specific aspect of the model. The aspect we are interested in is an garanteed connection setup. This just means that when both hosts are able to setup an connection and both hosts want a connection, the connection will be sure to be setup. Hosts are able to setup a connection when they aren't in the Init or Closed state, to force the hosts to enter other states we remove the transition from the Closed state back to itself and garantee the host leaves the closed state by making it an commited state. And to make sure a hosts doesn't deny the connection setup we remove the possibility for hosts to return to the closed state. With these changes to the model we can now write a query that checks if the model does garantee an connection between the two hosts given that they both try or accept connection setup.
+		The queries become more interesting while trying to analyse an specific aspect of the model. The aspect we are interested in is an guaranteed connection set-up. This just means that when both hosts are able to set-up an connection and both hosts want a connection, the connection will be sure to be set-up. Hosts are able to setup a connection when they aren't in the Init or Closed state, to force the hosts to enter other states we remove the transition from the Closed state back to itself and guarantee the host leaves the closed state by making it an committed state. And to make sure a hosts doesn't deny the connection set-up we remove the possibility for hosts to return to the closed state. With these changes to the model we can now write a query that checks if the model does guarantee an connection between the two hosts given that they both try or accept connection set-up.
 
-		First we prove that if the connection isn't setup using an simultanious initiation, that there will always follow an connection between the two hosts. To check if this condition holds within our model we need to disable the possibility for the simultanious initiation. We do this by removing the transition from the Listen state to the SynSent state and forcing within the query that one host travels the SynSent state, while the other passes the Listen state. To check if these conditions result in an established connection can be checked by the following query:
+		\subsubsection{Case 1: Basic three-way handshake}
+		First we prove that if the connection isn't set-up using an simultaneous initiation, that there will always follow an connection between the two hosts. To check if this condition holds within our model we need to disable the possibility for the simultaneous initiation. We do this by removing the transition from the Listen state to the SynSent state and forcing within the query that one host travels the SynSent state, while the other passes the Listen state. To check if these conditions result in an established connection can be checked by the following query:
 		\begin{verbatim}
 			(Host1.Listen and Host2.SynSent) -->
- (Host1.Established and Host2.Established)
+			(Host1.Established and Host2.Established)
 		\end{verbatim}
-		This query holds in our model as is shown in figure \ref{fig:verifier2.png}.
+		This query holds in our model as is shown in figure \ref{fig:verifier2}.
 		\begin{figure}[h!]
 			\begin{center}
 				\includegraphics[width=\linewidth]{verifier-listen.png}
@@ -241,12 +245,41 @@ or Host1.SynSent) and Host2.Established)
 			\caption{Uppaal verifier - Basic Three-way Handshake}
 			\label{fig:verifier2}
 		\end{figure}
+		% subsubsection Case 1: Basic three-way handshake (end)
+		
+		\subsubsection{Case 2: Simultaneous connection request}
+		Now we prove that when a simultaneous connection request happens, there will always be a established connection between both hosts. To check for this condition, we remove the transition between Closed and Listen. This way, both hosts have to establish a connection using a simultaneous connection set-up. Within the query we force that both hosts pass the SynSent state.
+		\begin{verbatim}
+			(Host1.SynSent and Host2.SynSent) -->
+			(Host1.Established and Host2.Established)
+		\end{verbatim}
+		This query holds in our model as is shown in figure \ref{fig:verifier3}.
+		\begin{figure}[h!]
+			\begin{center}
+				\includegraphics[width=\linewidth]{verifier-simul.png}
+			\end{center}
+			\caption{Uppaal verifier - Simultaneous Connection Request}
+			\label{fig:verifier3}
+		\end{figure}
+		
+		% subsubsection Case 2: Simultaneous connection request (end)
+		\subsubsection{Issues concerning the checking of this model}
+		At the moment it is not possible to check both queries in the same model without removing some connections. This is due to the fact that we do not model the behaviour of reset-packets. Because connection cannot be actively reset, there exists an infinite loop when the following occurs:
+		\begin{enumerate}
+			\item Host1 sends a Syn packet, and is now in the SynSent state
+			\item Host2 was in the Closed state, so the packet gets discarded
+			\item Host2 now sends a Syn packet to Host1 before Host1's re-send timer triggered.
+			\item Host1 thinks this is a simultaneous connection request and goes into the SynRcvd state. 
+			\item Host2 is now waiting for a Syn, or a SynAck packet and keeps re-sending Syn packets.
+			\item Host1 is now waiting for a Ack packet, and keeps re-sending Ack packets.
+		\end{enumerate}
+		% subsubsection Issues concerning the checking of this model (end)
 	% subsection guaranteeing_an_connection (end)
 % section model_checking_and_verification (end)
-
+	
 
 \section{Conclusions}
-
+		In this report we have proven the correctness of the basic three-way handshake and the simultaneous connection set-up on a simplified model of the TCP handshake.
 
 
 \end{document}
