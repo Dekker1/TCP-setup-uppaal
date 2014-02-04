@@ -143,10 +143,11 @@ typedef int[0,MAX_SEQ] SEQ;
 \end{verbatim}
 We ensure that every possible initial sequence number can be used for checking the model.
 
-Visually, our model has the same layout as the diagram on page 23 of Rfc793. This helps to see how our model maps to the real specification. (See figure 1 for our model)
+Visually, our model has the same layout as the diagram on page 23 of Rfc793. This helps to see how our model maps to the real specification. (See figure \ref{fig:figure2} for our model)
 \begin{figure*}
   \includegraphics[scale=0.55]{host_model} % at textwidth, the figure takes an entire page
   \caption{The model of a host}
+  \label{fig:figure2}
 \end{figure*}
 We model every state connected to the TCP handshake, namely Closed, Listen, SynSent, RynRcvd and Established. Since we can not synchronize two channels at once, we added committed states between Listen-SynRcvd, SynSent-Established, and SynSent-RynRcvd. This way we can model the behavior of receiving, and then sending a packet as a single action.
 
@@ -176,7 +177,7 @@ bool receive_packet(){
 
 This function handles the receiving of a packet, and returns whether this packet should be accepted, or not.
 
-If the syn flag of the incoming packet is set, it is always accepted. If this is not the case, then the sequence number of the packet is checked against the expected next sequence number.
+If the syn flag of the incoming packet is set, the next expected sequence number is initiated . If this is not the case, then the sequence number of the packet is checked against the expected next sequence number.
 
 When a packet is accepted, then the ack that this host will send is set to the received sequence number + 1, modulo the max number of sequence numbers.
 
@@ -196,7 +197,7 @@ When a packet is accepted, then the ack that this host will send is set to the r
 
 \section{Model checking and verification} % (fold)
 \label{sec:model_checking_and_verification}
-	Because we used Uppaal as our modeling tool, it provides us with an powerful query language to use for verifying our model against the specifications given in Rfc793. Most of these specifications have been discussed in the modeling itself. It would take too long to verify every detail of the model and every model will differ in some way as every model is prone to the creativity of it's designer. We can however guarantee some basic functionalities using the query language. Given that the model is correct, we can test various aspects of the model to check if there are loopholes within the protocol that haven't been uncovered. If there aren't any loopholes, then we can assume that the protocol, given our abstractions as described earlier, is proven correct when all possible states have been explored.
+	Because we used Uppaal as our modeling tool, it provides us with an powerful query language to use for verifying our model against the specifications given in Rfc793. Most of these specifications have been discussed in the modeling itself. It would take too long to verify every detail of the model and every model will differ in some way as every model is prone to the creativity of it's designer. We can however guarantee some basic functionalities using the query language. Given that the model is correct, we can test various aspects of the model to check if there are loopholes within the protocol that haven't been uncovered. If there aren't any loopholes, then we can assume that the protocol, given our abstractions as described earlier, is proven correct because all possible states have been explored.
 	\subsection{Model Verification} % (fold)
 	\label{sub:model_verification}
 		As discussed before we want to verify that the model has the basic functionality as described in the request for comments. The first thing that should be guaranteed is that two hosts can connect to each other. This is easily verified by the following query stating that there is a state such that both Host1 and Host2 are in the Established state:
@@ -229,7 +230,7 @@ or Host1.SynSent) and Host2.Established)
 	% subsection model_verification (end)
 	\subsection{Guaranteeing an connection} % (fold)
 	\label{sub:guaranteeing_an_connection}
-		The queries become more interesting when trying to analyse a specific aspect of the model. The aspect we are interested in is a guaranteed connection set-up. This means that when both hosts are able to set-up a connection and both hosts want a connection, the connection will always set-up. Hosts are only able to set-up a connection when they are not in the Init or Closed state. To force the hosts to enter the other states we remove the transition from the Closed state back to itself and guarantee the host leaves the Closed state by making it an committed state. To make sure a hosts does not deny the connection set-up we remove the possibility for hosts to return to the closed state. With these changes to the model we can now write a query that checks if the model does guarantee a connection between the two hosts given that they both try or accept connection set-up.
+		The queries become more interesting when trying to analyse a specific aspect of the model. The aspect we are interested in, is a guaranteed connection set-up. This means that when both hosts are able to set-up a connection and both hosts want a connection, the connection will always set-up. Hosts are only able to set-up a connection when they are not in the Init or Closed state. To force the hosts to enter the other states we remove the transition from the Closed state back to itself and guarantee the host leaves the Closed state by making it an committed state. To make sure a hosts does not deny the connection set-up we remove the possibility for hosts to return to the closed state. With these changes to the model we can now write a query that checks if the model does guarantee a connection between the two hosts given that they both try or accept connection set-up.
 
 		\subsubsection{Case 1: Basic three-way handshake}
 		First we prove that if the connection is not set-up using an simultaneous initiation, that there will always follow an connection between the two hosts. To check if this condition holds within our model we need to disable the possibility for the simultaneous initiation. We do this by removing the transition from the Listen state to the SynSent state and forcing within the query that one host visits the SynSent state, while the other visits the Listen state. To check if these conditions result in an established connection we use the following query:
@@ -248,7 +249,7 @@ or Host1.SynSent) and Host2.Established)
 		% subsubsection Case 1: Basic three-way handshake (end)
 		
 		\subsubsection{Case 2: Simultaneous connection request}
-		Now we prove that when a simultaneous connection request happens, there will always be a established connection between both hosts. To check for this condition, we remove the transition between Closed-Listen, Listen-Closed and SynSent-Closed. This way, both hosts have to establish a connection using a simultaneous connection set-up. Within the query we force that both hosts pass the SynSent state. Also we had to remove the packet discarding in the closed state. This is due to the fact that we do not handle reset packets. Please see the next section for a related problem.
+		Now we prove that when a simultaneous connection request happens, there will always be a established connection between both hosts. To check for this condition, we remove the transition between Closed and Listen. This way, both hosts have to establish a connection using a simultaneous connection set-up. Within the query we force that both hosts pass the SynSent state. Again, we had to remove the packet discarding in the closed state. This is due to the fact that we do not handle reset packets. Please see the next section for a related problem.
 		\begin{verbatim}
 			(Host1.SynSent and Host2.SynSent) -->
 			(Host1.Established and Host2.Established)
