@@ -65,7 +65,7 @@
 \twocolumn[\begin{@twocolumnfalse}
   \maketitle
   	\begin{abstract}
-  		\noindent In this report we will discuss our model in Uppaal of the 3-way handshake as used in the TCP protocol. We will give an overview of the handshake itself and provide meaningful observation about specific aspects of this protocol. Furthermore we will discuss the specifics of our model and comment on some of the decisions we made designing the model. In conclusion we will submit our model to verification and model checking using the Uppaal query language, proving basic basic functionality and guaranteeing connection set-up.
+  		\noindent In this report we discuss our Uppaal model of the 3-way handshake as used in the TCP protocol. We give an overview of the handshake itself and provide meaningful observation about specific aspects of this protocol. Furthermore we discuss the specifics of our model and comment on some of the decisions we made designing the model. We submitted our model to verification and model checking using the Uppaal query language. Finally, we proved that a connection set-up is guaranteed on a simplified model of the TCP connection set-up.
 	\end{abstract}
 \end{@twocolumnfalse}]
 
@@ -196,24 +196,24 @@ When a packet is accepted, then the ack that this host will send is set to the r
 
 \section{Model checking and verification} % (fold)
 \label{sec:model_checking_and_verification}
-	Because we used Uppaal as our modeling tool, it provides us with an powerful query language to use for verifying our model against the specifications given in Rfc793. Most of these specifications have been discussed in the modeling itself as it would take too long to verify every detail of the model and every model will differ in some way as every model is prone to the creativity of it's designer. We can however guarantee some basic functionalities using the query language. Given that the model is correct, we can test various aspects of the model to check if their are loopholes within the protocol that haven't been uncovered. If there aren't any loopholes, then we can assume that the protocol, given the abstractions as described earlier, is proven correct as all possible states have been explored.
+	Because we used Uppaal as our modeling tool, it provides us with an powerful query language to use for verifying our model against the specifications given in Rfc793. Most of these specifications have been discussed in the modeling itself. It would take too long to verify every detail of the model and every model will differ in some way as every model is prone to the creativity of it's designer. We can however guarantee some basic functionalities using the query language. Given that the model is correct, we can test various aspects of the model to check if there are loopholes within the protocol that haven't been uncovered. If there aren't any loopholes, then we can assume that the protocol, given our abstractions as described earlier, is proven correct when all possible states have been explored.
 	\subsection{Model Verification} % (fold)
 	\label{sub:model_verification}
-		As discussed before we can verify that the model has the basic functionality as described in the request for change. The first thing that should be guaranteed is that two hosts can connect to each other. This is simply verified by the following query stating that there is such a state that both Host1 and Host2 are in the Established state:
+		As discussed before we want to verify that the model has the basic functionality as described in the request for comments. The first thing that should be guaranteed is that two hosts can connect to each other. This is easily verified by the following query stating that there is a state such that both Host1 and Host2 are in the Established state:
 		\begin{verbatim}
 			E<> Host1.Established 
 			and Host2.Established
 		\end{verbatim}
-		This is verified this way as an host only enter the Established state once it's connected.
+		This is verified. Because this holds, we know that the hosts can be connected since this is defined as both hosts being in the Established state.
 
-		Furthermore one host shouldn't be in the established state, thinking their is an connection, while the the other host is still in the Listen, Closed or SynSent state, knowing nothing about an connection whatsoever. This can be verified using the following query:
+		Furthermore one host shouldn't be in the established state, thinking there is a connection, while the the other host is still in the Listen, Closed or SynSent state, knowing nothing about an connection whatsoever. This can be verified using the following query:
 		\begin{verbatim}
 			A[] not ((Host1.Closed or Host1.Listen 
 or Host1.SynSent) and Host2.Established)
 		\end{verbatim}
-		This query states that there isn't a state were Host1 is in the Closed or Listen state while Host2 is in the Established state. Note that the one of the host can be in the SynRcvd state while the other has an established connection. This would mean the first host is waiting for the last packet sent by the second host.
+		This query states that there isn't a state were Host1 is in the Closed, Listen or SynSent state while Host2 is in the Established state. Note that Host1 can be in the SynRcvd state while the other has an established connection. This would mean the first host is waiting for the last packet sent by the second host.
 
-		Lastly we want to guarantee that the protocol doesn't have places were the hosts get stuck and don't know what to do. This phenomenon is an deadlock in this model, where there aren't any options advance in an specific state of the model. To test this we need to make sure that our established state transitions back to itself, so it doesn't result in an deadlock. Then we can check for deadlocks using the simple query:
+		Finally we want to guarantee that the protocol doesn't have places were the hosts get stuck and can not progress to a new state. This phenomenon is a deadlock in this model, where there is a state where no any options to advance are available. To test this we need to make sure that our established state transitions back to itself, so it doesn't result in an deadlock. Then we can check for deadlocks using the simple query:
 		\begin{verbatim}
 			A[] not deadlock
 		\end{verbatim}
@@ -229,10 +229,10 @@ or Host1.SynSent) and Host2.Established)
 	% subsection model_verification (end)
 	\subsection{Guaranteeing an connection} % (fold)
 	\label{sub:guaranteeing_an_connection}
-		The queries become more interesting while trying to analyse an specific aspect of the model. The aspect we are interested in is an guaranteed connection set-up. This just means that when both hosts are able to set-up an connection and both hosts want a connection, the connection will be sure to be set-up. Hosts are able to setup a connection when they aren't in the Init or Closed state, to force the hosts to enter other states we remove the transition from the Closed state back to itself and guarantee the host leaves the closed state by making it an committed state. And to make sure a hosts doesn't deny the connection set-up we remove the possibility for hosts to return to the closed state. With these changes to the model we can now write a query that checks if the model does guarantee an connection between the two hosts given that they both try or accept connection set-up.
+		The queries become more interesting when trying to analyse a specific aspect of the model. The aspect we are interested in is a guaranteed connection set-up. This means that when both hosts are able to set-up a connection and both hosts want a connection, the connection will always set-up. Hosts are only able to set-up a connection when they aren't in the Init or Closed state. To force the hosts to enter the other states we remove the transition from the Closed state back to itself and guarantee the host leaves the Closed state by making it an committed state. To make sure a hosts does not deny the connection set-up we remove the possibility for hosts to return to the closed state. With these changes to the model we can now write a query that checks if the model does guarantee a connection between the two hosts given that they both try or accept connection set-up.
 
 		\subsubsection{Case 1: Basic three-way handshake}
-		First we prove that if the connection isn't set-up using an simultaneous initiation, that there will always follow an connection between the two hosts. To check if this condition holds within our model we need to disable the possibility for the simultaneous initiation. We do this by removing the transition from the Listen state to the SynSent state and forcing within the query that one host travels the SynSent state, while the other passes the Listen state. To check if these conditions result in an established connection can be checked by the following query:
+		First we prove that if the connection is not set-up using an simultaneous initiation, that there will always follow an connection between the two hosts. To check if this condition holds within our model we need to disable the possibility for the simultaneous initiation. We do this by removing the transition from the Listen state to the SynSent state and forcing within the query that one host visits the SynSent state, while the other visits the Listen state. To check if these conditions result in an established connection we use the following query:
 		\begin{verbatim}
 			(Host1.Listen and Host2.SynSent) -->
 			(Host1.Established and Host2.Established)
