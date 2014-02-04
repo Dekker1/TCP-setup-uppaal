@@ -205,7 +205,8 @@ When a packet is accepted, then the ack that this host will send is set to the r
 
 		Furthermore one host shouldn't be in the established state, thinking their is an connection, while the the other host is still in the Listen, Closed or SynSent state, knowing nothing about an connection whatsoever. This can be verified using the following query:
 		\begin{verbatim}
-			A[] not ((Host1.Closed or Host1.Listen or Host1.SynSent) and Host2.Established)
+			A[] not ((Host1.Closed or Host1.Listen 
+or Host1.SynSent) and Host2.Established)
 		\end{verbatim}
 		This query states that there isn't a state were Host1 is in the Closed or Listen state while Host2 is in the Established state. Note that the one of the host can be in the SynRcvd state while the other has an established connection. This would mean the first host is waiting for the last packet sent by the second host.
 
@@ -225,7 +226,21 @@ When a packet is accepted, then the ack that this host will send is set to the r
 	% subsection model_verification (end)
 	\subsection{Guaranteeing an connection} % (fold)
 	\label{sub:guaranteeing_an_connection}
-	
+		The queries become more interesting while trying to analyse an specific aspect of the model. The aspect we are interested in is an garanteed connection setup. This just means that when both hosts are able to setup an connection and both hosts want a connection, the connection will be sure to be setup. Hosts are able to setup a connection when they aren't in the Init or Closed state, to force the hosts to enter other states we remove the transition from the Closed state back to itself and garantee the host leaves the closed state by making it an commited state. And to make sure a hosts doesn't deny the connection setup we remove the possibility for hosts to return to the closed state. With these changes to the model we can now write a query that checks if the model does garantee an connection between the two hosts given that they both try or accept connection setup.
+
+		First we prove that if the connection isn't setup using an simultanious initiation, that there will always follow an connection between the two hosts. To check if this condition holds within our model we need to disable the possibility for the simultanious initiation. We do this by removing the transition from the Listen state to the SynSent state and forcing within the query that one host travels the SynSent state, while the other passes the Listen state. To check if these conditions result in an established connection can be checked by the following query:
+		\begin{verbatim}
+			(Host1.Listen and Host2.SynSent) -->
+ (Host1.Established and Host2.Established)
+		\end{verbatim}
+		This query holds in our model as is shown in figure \ref{fig:verifier2.png}.
+		\begin{figure}[h!]
+			\begin{center}
+				\includegraphics[width=\linewidth]{verifier-listen.png}
+			\end{center}
+			\caption{Uppaal verifier - Basic Three-way Handshake}
+			\label{fig:verifier2}
+		\end{figure}
 	% subsection guaranteeing_an_connection (end)
 % section model_checking_and_verification (end)
 
